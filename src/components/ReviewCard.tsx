@@ -1,22 +1,51 @@
-import { Image, StyleSheet, Text, View } from "react-native";
+import { Pressable, Image, StyleSheet, Text, View } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { router } from "expo-router";
 
 import { AfterActionReview } from "@/types/domain";
 import { formatDate } from "@/lib/format";
+import { sanitizeRemoteImageUrl } from "@/lib/media";
 import { colors, radii, typography } from "@/theme";
 
-export function ReviewCard({ item }: { item: AfterActionReview }) {
+export function ReviewCard({
+  item,
+  favorited,
+  onToggleFavorite,
+}: {
+  item: AfterActionReview;
+  favorited?: boolean;
+  onToggleFavorite?: () => void;
+}) {
   return (
-    <View style={styles.card}>
-      <Image source={{ uri: item.chartImage }} style={styles.image} />
+    <Pressable style={styles.card} onPress={() => router.push(`/review/${item.id}`)}>
+      <Image source={{ uri: sanitizeRemoteImageUrl(item.chartImage) }} style={styles.image} />
       <View style={styles.headerRow}>
         <Text style={styles.market}>{item.market}</Text>
-        <Text style={styles.free}>ACCES GRATUIT</Text>
+        <View style={styles.headerActions}>
+          <Text style={styles.free}>ACCES GRATUIT</Text>
+          {onToggleFavorite ? (
+            <Pressable
+              onPress={(event) => {
+                event.stopPropagation?.();
+                onToggleFavorite();
+              }}
+              hitSlop={10}
+              style={styles.favoriteButton}
+            >
+              <MaterialCommunityIcons
+                name={favorited ? "star" : "star-outline"}
+                size={20}
+                color={favorited ? colors.goldBright : colors.textMuted}
+              />
+            </Pressable>
+          ) : null}
+        </View>
       </View>
       <Text style={styles.title}>{item.title}</Text>
       <Text style={styles.typeLine}>Review după mișcare</Text>
       <Text style={styles.body}>{item.shortText}</Text>
       <Text style={styles.date}>{formatDate(item.publishedAt)}</Text>
-    </View>
+    </Pressable>
   );
 }
 
@@ -40,6 +69,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 14,
   },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
   market: {
     color: colors.gold,
     fontSize: typography.small,
@@ -51,6 +85,16 @@ const styles = StyleSheet.create({
     fontSize: typography.small,
     fontWeight: "800",
     letterSpacing: 0.8,
+  },
+  favoriteButton: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.bgMuted,
   },
   title: {
     color: colors.textStrong,

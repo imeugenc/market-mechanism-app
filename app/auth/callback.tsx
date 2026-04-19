@@ -1,13 +1,45 @@
 import { useEffect } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
+import * as Linking from "expo-linking";
 
+import { isOwnerEmail } from "@/constants/access";
 import { Screen } from "@/components/Screen";
+import { establishRecoverySession, parseAuthTokensFromUrl } from "@/features/auth/auth";
 import { useAppState } from "@/providers/AppProvider";
 import { colors, typography } from "@/theme";
 
 export default function AuthCallbackScreen() {
   const { authReady, session, user } = useAppState();
+  const isAdmin = user?.isAdmin || isOwnerEmail(session?.user?.email);
+  const incomingUrl = Linking.useURL();
+  const { access_token, refresh_token, code, token_hash, type } = useLocalSearchParams<{
+    access_token?: string;
+    refresh_token?: string;
+    code?: string;
+    token_hash?: string;
+    type?: string;
+  }>();
+  const parsedTokens = parseAuthTokensFromUrl(incomingUrl);
+  const accessToken = access_token ?? parsedTokens.accessToken;
+  const refreshToken = refresh_token ?? parsedTokens.refreshToken;
+  const authCode = code ?? parsedTokens.code;
+  const tokenHash = token_hash ?? parsedTokens.tokenHash;
+  const linkType = type ?? parsedTokens.type;
+
+  useEffect(() => {
+    if (!accessToken && !refreshToken && !authCode && !tokenHash) {
+      return;
+    }
+
+    void establishRecoverySession({
+      accessToken,
+      refreshToken,
+      code: authCode,
+      tokenHash,
+      type: linkType,
+    });
+  }, [accessToken, authCode, linkType, refreshToken, tokenHash]);
 
   useEffect(() => {
     if (!authReady) {
@@ -19,13 +51,13 @@ export default function AuthCallbackScreen() {
       return;
     }
 
-    if (user?.isAdmin) {
+    if (isAdmin) {
       router.replace("/admin");
       return;
     }
 
-    router.replace("/");
-  }, [authReady, session?.user, user?.isAdmin]);
+    router.replace("/(tabs)");
+  }, [authReady, isAdmin, session?.user]);
 
   return (
     <Screen>

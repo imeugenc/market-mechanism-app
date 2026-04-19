@@ -1,27 +1,35 @@
 import { supabase } from "@/lib/supabase";
 import { AfterActionReview, Market } from "@/types/domain";
+import { normalizeIsoDate } from "@/lib/dates";
+import { sanitizeRemoteImageUrl } from "@/lib/media";
 
 type AfterActionReviewRow = {
   id: string;
   market: Market;
   title: string;
   short_text: string | null;
+  body_text: string | null;
   summary: string | null;
   chart_image: string | null;
   chart_url: string | null;
+  video_url: string | null;
   published_at: string | null;
   created_at: string | null;
   is_free: true;
 };
 
 function mapAfterActionReview(row: AfterActionReviewRow): AfterActionReview {
+  const fallbackDate = normalizeIsoDate(row.created_at);
+
   return {
     id: row.id,
     market: row.market,
     title: row.title,
     shortText: row.short_text ?? row.summary ?? "",
-    chartImage: row.chart_image ?? row.chart_url ?? "",
-    publishedAt: row.published_at ?? row.created_at ?? new Date().toISOString(),
+    bodyText: row.body_text ?? row.short_text ?? row.summary ?? "",
+    chartImage: sanitizeRemoteImageUrl(row.chart_image ?? row.chart_url),
+    videoUrl: row.video_url ?? undefined,
+    publishedAt: normalizeIsoDate(row.published_at, fallbackDate),
     isFree: true,
   };
 }
@@ -29,7 +37,7 @@ function mapAfterActionReview(row: AfterActionReviewRow): AfterActionReview {
 export async function fetchAfterActionReviews() {
   const result = await supabase
     .from("after_action_reviews")
-    .select("id, market, title, short_text, summary, chart_image, chart_url, published_at, created_at, is_free")
+    .select("id, market, title, short_text, body_text, summary, chart_image, chart_url, video_url, published_at, created_at, is_free")
     .order("created_at", { ascending: false });
 
   return {
@@ -43,18 +51,21 @@ export async function publishAfterActionReview(input: {
   title: string;
   short_text: string;
   chart_image: string;
+  body_text?: string;
+  video_url?: string;
   published_at?: string;
 }) {
+  const publishedAt = normalizeIsoDate(input.published_at);
   const result = await supabase
     .from("after_action_reviews")
     .insert({
       ...input,
       summary: input.short_text,
       chart_url: input.chart_image,
-      published_at: input.published_at ?? new Date().toISOString(),
+      published_at: publishedAt,
       is_free: true,
     })
-    .select("id, market, title, short_text, summary, chart_image, chart_url, published_at, created_at, is_free")
+    .select("id, market, title, short_text, body_text, summary, chart_image, chart_url, video_url, published_at, created_at, is_free")
     .single();
 
   return {
@@ -70,19 +81,22 @@ export async function updateAfterActionReview(
     title: string;
     short_text: string;
     chart_image: string;
+    body_text?: string;
+    video_url?: string;
     published_at?: string;
   },
 ) {
+  const publishedAt = normalizeIsoDate(input.published_at);
   const result = await supabase
     .from("after_action_reviews")
     .update({
       ...input,
       summary: input.short_text,
       chart_url: input.chart_image,
-      published_at: input.published_at ?? new Date().toISOString(),
+      published_at: publishedAt,
     })
     .eq("id", reviewId)
-    .select("id, market, title, short_text, summary, chart_image, chart_url, published_at, created_at, is_free")
+    .select("id, market, title, short_text, body_text, summary, chart_image, chart_url, video_url, published_at, created_at, is_free")
     .single();
 
   return {

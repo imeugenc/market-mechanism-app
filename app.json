@@ -9,6 +9,7 @@
     "plugins": [
       "expo-router",
       "expo-dev-client",
+      "expo-image-picker",
       "expo-notifications",
       "expo-font"
     ],
@@ -28,7 +29,10 @@
     "extra": {
       "router": {},
       "supabaseUrl": "",
-      "supabaseAnonKey": ""
+      "supabaseAnonKey": "",
+      "eas": {
+        "projectId": "2c60e79f-90bb-42f5-b39e-4975213bea6e"
+      }
     }
   }
 }

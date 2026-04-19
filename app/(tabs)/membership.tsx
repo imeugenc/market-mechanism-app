@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { PremiumCard } from "@/components/PremiumCard";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Screen } from "@/components/Screen";
 import { SectionHeader } from "@/components/SectionHeader";
+import { pickAndUploadPaymentProof } from "@/features/storage/paymentProofs";
 import { displayPlan } from "@/lib/display";
 import { formatDate } from "@/lib/format";
 import { useAppState } from "@/providers/AppProvider";
@@ -27,22 +28,26 @@ const benefits = [
 export default function MembershipScreen() {
   const { createPaymentRequest, membership, paymentRequests, session, user } = useAppState();
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [showManagementModal, setShowManagementModal] = useState(false);
   const defaultName = useMemo(() => user?.name ?? session?.user?.email?.split("@")[0] ?? "", [session?.user?.email, user?.name]);
   const defaultEmail = useMemo(() => user?.email ?? session?.user?.email ?? "", [session?.user?.email, user?.email]);
   const [fullName, setFullName] = useState(defaultName);
   const [contactEmail, setContactEmail] = useState(defaultEmail);
   const [selectedPlan, setSelectedPlan] = useState<"PRO">("PRO");
+  const [durationDays, setDurationDays] = useState<30 | 90>(30);
   const [paymentMethod, setPaymentMethod] = useState<"paypal" | "usdt" | "redotpay">("paypal");
   const [paymentProof, setPaymentProof] = useState("");
   const [transactionRef, setTransactionRef] = useState("");
   const [notes, setNotes] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [uploadingProof, setUploadingProof] = useState(false);
 
   const resetForm = () => {
     setFullName(user?.name ?? session?.user?.email?.split("@")[0] ?? "");
     setContactEmail(user?.email ?? session?.user?.email ?? "");
     setSelectedPlan("PRO");
+    setDurationDays(30);
     setPaymentMethod("paypal");
     setPaymentProof("");
     setTransactionRef("");
@@ -50,7 +55,12 @@ export default function MembershipScreen() {
     setErrorMessage("");
   };
 
-  const submitConfirmation = () => {
+  const submitConfirmation = async () => {
+    if (!session?.user) {
+      setErrorMessage("Autentifică-te înainte să trimiți confirmarea pentru Premium.");
+      return;
+    }
+
     if (!fullName.trim()) {
       setErrorMessage("Introdu numele complet.");
       return;
@@ -66,8 +76,10 @@ export default function MembershipScreen() {
       return;
     }
 
-    createPaymentRequest({
+    const result = await createPaymentRequest({
       planTarget: selectedPlan,
+      planLabel: durationDays === 90 ? "Premium 90 zile" : "Premium 30 zile",
+      durationDays,
       fullName: fullName.trim(),
       contactEmail: contactEmail.trim(),
       paymentMethod,
@@ -76,9 +88,36 @@ export default function MembershipScreen() {
       notes: notes.trim(),
     });
 
-    setSuccessMessage("Confirmarea pentru Premium a fost trimisă. O vei vedea și în istoric, iar verificarea manuală poate dura până la 24h.");
+    if (!result.success) {
+      setErrorMessage(result.message);
+      return;
+    }
+
+    setSuccessMessage("Contul tău Premium va deveni activ imediat ce plata este validată. Validarea poate dura până la 24 de ore.");
     setShowConfirmationModal(false);
     resetForm();
+    Alert.alert("Confirmare trimisă", result.message);
+  };
+
+  const uploadProof = async () => {
+    const activeUserId = session?.user?.id ?? user?.id;
+
+    if (!activeUserId) {
+      setErrorMessage("Autentifică-te înainte să încarci dovada plății.");
+      return;
+    }
+
+    setUploadingProof(true);
+    const result = await pickAndUploadPaymentProof(activeUserId);
+    setUploadingProof(false);
+
+    if (!result.success || !result.url) {
+      setErrorMessage(result.message);
+      return;
+    }
+
+    setPaymentProof(result.url);
+    setErrorMessage("");
   };
 
   return (
@@ -107,7 +146,7 @@ export default function MembershipScreen() {
           <Text style={styles.trustText}>Răspuns rapid. Execuție clară.</Text>
         </View>
         <PrimaryButton
-          label={membership.currentPlan === "FREE" ? "Trimite confirmarea pentru Premium" : "Premium în curs de verificare"}
+          label={membership.currentPlan === "FREE" ? "Trimite confirmarea pentru premium" : "Prelungește Premium"}
           onPress={() => {
             setSuccessMessage("");
             setShowConfirmationModal(true);
@@ -120,11 +159,22 @@ export default function MembershipScreen() {
           <Pressable style={styles.modalScrim} onPress={() => setShowConfirmationModal(false)} />
           <View style={styles.modalCard}>
             <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false}>
+              <View style={styles.modalTopRow}>
+                <PrimaryButton label="Înapoi" variant="ghost" onPress={() => setShowConfirmationModal(false)} />
+              </View>
               <Text style={styles.eyebrow}>Confirmare Premium</Text>
               <Text style={styles.modalTitle}>Trimite datele pentru activare</Text>
               <Text style={styles.body}>
                 Completează formularul și trimite dovada plății. Cererea va apărea imediat în panoul de administrare pentru verificare.
               </Text>
+
+              <View style={styles.paymentCard}>
+                <Text style={styles.paymentHeadline}>Metode de plată</Text>
+                <Text style={styles.paymentValue}>PayPal: eugenfm95@gmail.com</Text>
+                <Text style={styles.paymentValue}>USDT (TRC20): TLuz2gAdrWjv7UbS9FTcrkH2Z7pCw2RZLx</Text>
+                <Text style={styles.paymentValue}>Redotpay UserID: 1838748987</Text>
+                <Text style={styles.paymentNote}>După plată, trimite dovada sau referința tranzacției în formularul de mai jos.</Text>
+              </View>
 
               <Text style={styles.formLabel}>Nume complet</Text>
               <TextInput
@@ -155,6 +205,24 @@ export default function MembershipScreen() {
                 />
               </View>
 
+              <Text style={styles.formLabel}>Durată acces</Text>
+              <View style={styles.pricingBand}>
+                <Text style={styles.pricingText}>30 zile = 10$</Text>
+                <Text style={styles.pricingText}>90 zile = 25$</Text>
+              </View>
+              <View style={styles.methodRow}>
+                <PrimaryButton
+                  label="30 zile • 10$"
+                  variant={durationDays === 30 ? "gold" : "ghost"}
+                  onPress={() => setDurationDays(30)}
+                />
+                <PrimaryButton
+                  label="90 zile • 25$"
+                  variant={durationDays === 90 ? "gold" : "ghost"}
+                  onPress={() => setDurationDays(90)}
+                />
+              </View>
+
               <Text style={styles.formLabel}>Metodă de plată</Text>
               <View style={styles.methodRow}>
                 <PrimaryButton
@@ -180,9 +248,17 @@ export default function MembershipScreen() {
                 onChangeText={setPaymentProof}
                 style={[styles.input, styles.notes]}
                 multiline
-                placeholder="Link către dovadă, hash tranzacție sau o notă clară despre plată"
+                placeholder="Link către captură, link cloud, hash tranzacție sau o notă clară despre plată"
                 placeholderTextColor="#6F6A5C"
               />
+              <PrimaryButton
+                label={uploadingProof ? "Se încarcă dovada..." : "Încarcă captură / dovadă"}
+                variant="ghost"
+                onPress={() => void uploadProof()}
+              />
+              <Text style={styles.helperText}>
+                Poți încărca o captură direct din telefon sau poți lipi manual un link / hash / referință de plată.
+              </Text>
 
               <Text style={styles.formLabel}>Referință tranzacție</Text>
               <TextInput
@@ -221,6 +297,9 @@ export default function MembershipScreen() {
         <Text style={styles.statusBody}>
           Utilizatorii Gratuit văd review-urile după mișcare. Membrii Premium primesc analiza video completă și un flux mai clar de execuție.
         </Text>
+        <Text style={styles.statusBody}>Plan activ: {membership.planLabel ?? (membership.currentPlan === "PRO" ? "Premium All Access" : "Acces Gratuit")}</Text>
+        <Text style={styles.statusBody}>Expirare: {membership.expiresAt ? formatDate(membership.expiresAt) : "Nu este setată încă"}</Text>
+        <Text style={styles.statusBody}>Reînnoire: {membership.renewalMode === "manual" ? "Confirmare manuală" : "Fără reînnoire"}</Text>
         {successMessage ? <Text style={styles.feedbackSuccess}>{successMessage}</Text> : null}
       </View>
 
@@ -269,6 +348,24 @@ export default function MembershipScreen() {
           />
         </View>
 
+        <Text style={styles.formLabel}>Durată acces</Text>
+        <View style={styles.pricingBand}>
+          <Text style={styles.pricingText}>30 zile = 10$</Text>
+          <Text style={styles.pricingText}>90 zile = 25$</Text>
+        </View>
+        <View style={styles.methodRow}>
+          <PrimaryButton
+            label="30 zile • 10$"
+            variant={durationDays === 30 ? "gold" : "ghost"}
+            onPress={() => setDurationDays(30)}
+          />
+          <PrimaryButton
+            label="90 zile • 25$"
+            variant={durationDays === 90 ? "gold" : "ghost"}
+            onPress={() => setDurationDays(90)}
+          />
+        </View>
+
         <Text style={styles.formLabel}>Metodă de plată</Text>
         <View style={styles.methodRow}>
           <PrimaryButton
@@ -294,9 +391,12 @@ export default function MembershipScreen() {
           onChangeText={setPaymentProof}
           style={[styles.input, styles.notes]}
           multiline
-          placeholder="Ex: captură trimisă, email PayPal, hash tranzacție"
+          placeholder="Ex: link captură, link cloud, email PayPal, hash tranzacție"
           placeholderTextColor="#6F6A5C"
         />
+        <Text style={styles.helperText}>
+          Dacă nu încarci încă fișier direct din telefon, folosește un link către captură sau adaugă hash-ul / referința plății.
+        </Text>
 
         <Text style={styles.formLabel}>Nr. tranzacției</Text>
         <TextInput
@@ -333,11 +433,18 @@ export default function MembershipScreen() {
               <View key={item.id} style={styles.historyCard}>
                 <Text style={styles.historyTitle}>{item.fullName} • Upgrade Premium • {item.paymentMethod.toUpperCase()}</Text>
                 <Text style={styles.historyMeta}>
-                  {item.status === "verified" ? "Confirmată" : item.status === "rejected" ? "Respinsă" : "În verificare"} • {formatDate(item.createdAt)}
+                  {item.status === "verified" ? "Validată" : item.status === "rejected" ? "Respinsă" : "În procesare / validare"} • {formatDate(item.createdAt)}
                 </Text>
                 <Text style={styles.historyBody}>Email: {item.contactEmail}</Text>
                 <Text style={styles.historyBody}>{item.paymentProof}</Text>
                 {item.notes ? <Text style={styles.historyBody}>Mesaj: {item.notes}</Text> : null}
+                <Text style={styles.historyBody}>
+                  {item.status === "verified"
+                    ? "Contul tău Premium este activ."
+                    : item.status === "rejected"
+                      ? "Cererea a fost respinsă. Poți retrimite confirmarea cu o dovadă mai clară."
+                      : "Cererea a fost primită și este în curs de verificare manuală."}
+                </Text>
               </View>
             ))}
           </View>
@@ -361,11 +468,35 @@ export default function MembershipScreen() {
         ))}
       </View>
 
-      <SectionHeader eyebrow="Cont" title="Placeholder pentru gestionare abonament" />
+      <SectionHeader eyebrow="Cont" title="Gestionează abonamentul" />
       <View style={styles.actions}>
-        <PrimaryButton label="Gestionează abonamentul" variant="ghost" onPress={() => undefined} />
-        <PrimaryButton label="Restaurează achizițiile" variant="ghost" onPress={() => undefined} />
+        <PrimaryButton label="Gestionează abonamentul" variant="ghost" onPress={() => setShowManagementModal(true)} />
       </View>
+
+      <Modal visible={showManagementModal} transparent animationType="fade" onRequestClose={() => setShowManagementModal(false)}>
+        <View style={styles.modalBackdrop}>
+          <Pressable style={styles.modalScrim} onPress={() => setShowManagementModal(false)} />
+          <View style={styles.modalCard}>
+            <View style={styles.modalContent}>
+              <Text style={styles.eyebrow}>Abonamentul meu</Text>
+              <Text style={styles.modalTitle}>Status și pași utili</Text>
+              <Text style={styles.body}>Aici vezi exact unde se află accesul tău și ce trebuie să faci pentru activare sau reînnoire.</Text>
+              <View style={styles.statusCard}>
+                <Text style={styles.statusBody}>Plan curent: {membership.planLabel ?? (membership.currentPlan === "PRO" ? "Premium All Access" : "Acces Gratuit")}</Text>
+                <Text style={styles.statusBody}>Nivel acces: {displayPlan(membership.currentPlan)}</Text>
+                <Text style={styles.statusBody}>Expirare: {membership.expiresAt ? formatDate(membership.expiresAt) : "Nu este setată încă"}</Text>
+                <Text style={styles.statusBody}>Reînnoire: {membership.renewalMode === "manual" ? "Manuală după confirmarea plății" : "Nesetată"}</Text>
+              </View>
+              <Text style={styles.paymentNote}>Flux clar: vezi metodele de plată, plătești, trimiți confirmarea, apoi adminul aprobă sau respinge cererea. La aprobare, planul devine Premium imediat.</Text>
+              <PrimaryButton label="Trimite confirmarea pentru premium" onPress={() => {
+                setShowManagementModal(false);
+                setShowConfirmationModal(true);
+              }} />
+              <PrimaryButton label="Închide" variant="ghost" onPress={() => setShowManagementModal(false)} />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Screen>
   );
 }
@@ -551,6 +682,23 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: spacing.sm,
   },
+  pricingBand: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.md,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.bgMuted,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  pricingText: {
+    color: colors.goldBright,
+    fontSize: typography.small,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+  },
   input: {
     minHeight: 52,
     borderRadius: radii.md,
@@ -564,6 +712,11 @@ const styles = StyleSheet.create({
   notes: {
     minHeight: 110,
     textAlignVertical: "top",
+  },
+  helperText: {
+    color: colors.textMuted,
+    fontSize: typography.small,
+    lineHeight: 18,
   },
   historyList: {
     gap: spacing.sm,
@@ -610,6 +763,10 @@ const styles = StyleSheet.create({
   modalContent: {
     padding: 20,
     gap: spacing.sm,
+  },
+  modalTopRow: {
+    flexDirection: "row",
+    justifyContent: "flex-start",
   },
   modalTitle: {
     color: colors.textStrong,

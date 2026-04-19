@@ -18,13 +18,15 @@ export default function MarketsScreen() {
       />
       <View style={styles.marketTabs}>
         {CORE_MARKETS.map((market) => (
-          <PrimaryButton key={market} label={market} variant="ghost" onPress={() => router.push(`/market/${market}`)} />
+          <PrimaryButton key={market} label={market} variant="ghost" onPress={() => router.push(`/(tabs)/markets/${market}`)} />
         ))}
+        <PrimaryButton label="Altcoins" variant="ghost" onPress={() => router.push("/(tabs)/markets/altcoins")} />
       </View>
       <View style={styles.container}>
         {CORE_MARKETS.map((market) => (
           <MarketCard key={market} market={market} />
         ))}
+        <PrimaryButton label="Deschide Altcoins" onPress={() => router.push("/(tabs)/markets/altcoins")} />
       </View>
     </Screen>
   );

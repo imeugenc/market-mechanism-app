@@ -19,13 +19,13 @@ export const REQUEST_TIERS: Array<{
     title: "Analiză video personalizată",
     description: "Analiză video personalizată, livrată clar și concis pentru activul solicitat.",
     deliveryLabel: "Video personalizat",
-    turnaround: "Cel mai ales",
+    turnaround: "Maxim 8 ore",
   },
   {
     tier: 10,
     title: "Analiză video premium",
     description: "Analiză video premium, cu mai mult context, structură și profunzime.",
     deliveryLabel: "Video premium",
-    turnaround: "Nivel maxim",
+    turnaround: "Maxim 8 ore",
   },
 ];

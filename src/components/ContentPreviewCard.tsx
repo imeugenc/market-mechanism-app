@@ -7,13 +7,17 @@ import { DailyAnalysis } from "@/types/domain";
 export function ContentPreviewCard({
   item,
   locked,
+  favorited,
+  onToggleFavorite,
 }: {
   item: DailyAnalysis;
   locked?: boolean;
+  favorited?: boolean;
+  onToggleFavorite?: () => void;
 }) {
   return (
-    <Pressable onPress={() => router.push(locked ? "/membership" : `/market/${item.market}`)} style={styles.wrapper}>
-      <DailyVideoCard item={item} locked={locked} />
+    <Pressable onPress={() => router.push(locked ? "/(tabs)/membership" : `/(tabs)/markets/${item.market}`)} style={styles.wrapper}>
+      <DailyVideoCard item={item} locked={locked} favorited={favorited} onToggleFavorite={onToggleFavorite} />
     </Pressable>
   );
 }

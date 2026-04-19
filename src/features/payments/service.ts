@@ -6,6 +6,8 @@ type PaymentRequestRow = {
   user_id: string;
   type: "membership_upgrade";
   plan_target: UserPlan;
+  plan_label: string | null;
+  duration_days: number | null;
   full_name: string | null;
   contact_email: string | null;
   payment_method: "paypal" | "usdt" | "redotpay";
@@ -23,6 +25,8 @@ function mapPaymentRequest(row: PaymentRequestRow): PaymentRequest {
     userId: row.user_id,
     type: row.type,
     planTarget: row.plan_target,
+    planLabel: row.plan_label ?? undefined,
+    durationDays: row.duration_days ?? undefined,
     fullName: row.full_name ?? "",
     contactEmail: row.contact_email ?? "",
     paymentMethod: row.payment_method,
@@ -38,8 +42,9 @@ function mapPaymentRequest(row: PaymentRequestRow): PaymentRequest {
 export async function fetchPaymentRequests() {
   const result = await supabase
     .from("payment_requests")
-    .select("id, user_id, type, plan_target, full_name, contact_email, payment_method, payment_proof, transaction_ref, notes, status, created_at, verified_at")
-    .order("created_at", { ascending: false });
+    .select("id, user_id, type, plan_target, plan_label, duration_days, full_name, contact_email, payment_method, payment_proof, transaction_ref, notes, status, created_at, verified_at")
+    .order("created_at", { ascending: false })
+    .limit(200);
 
   return {
     ...result,
@@ -50,6 +55,8 @@ export async function fetchPaymentRequests() {
 export async function createPaymentRequest(input: {
   user_id: string;
   plan_target: UserPlan;
+  plan_label?: string;
+  duration_days?: number;
   full_name: string;
   contact_email: string;
   payment_method: "paypal" | "usdt" | "redotpay";
@@ -63,7 +70,7 @@ export async function createPaymentRequest(input: {
       type: "membership_upgrade",
       ...input,
     })
-    .select("id, user_id, type, plan_target, full_name, contact_email, payment_method, payment_proof, transaction_ref, notes, status, created_at, verified_at")
+    .select("id, user_id, type, plan_target, plan_label, duration_days, full_name, contact_email, payment_method, payment_proof, transaction_ref, notes, status, created_at, verified_at")
     .single();
 
   return {
@@ -85,8 +92,8 @@ export async function updatePaymentRequest(
       verified_at: input.status === "verified" ? new Date().toISOString() : null,
     })
     .eq("id", paymentRequestId)
-    .select("id, user_id, type, plan_target, full_name, contact_email, payment_method, payment_proof, transaction_ref, notes, status, created_at, verified_at")
-    .single();
+    .select("id, user_id, type, plan_target, plan_label, duration_days, full_name, contact_email, payment_method, payment_proof, transaction_ref, notes, status, created_at, verified_at")
+    .maybeSingle();
 
   return {
     ...result,

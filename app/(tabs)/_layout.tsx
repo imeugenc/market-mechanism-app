@@ -1,11 +1,13 @@
 import { FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 
+import { isOwnerEmail } from "@/constants/access";
 import { useAppState } from "@/providers/AppProvider";
 import { colors } from "@/theme";
 
 export default function TabsLayout() {
-  const { user } = useAppState();
+  const { session, user } = useAppState();
+  const isAdmin = user?.isAdmin || isOwnerEmail(session?.user?.email);
 
   return (
     <Tabs
@@ -59,9 +61,27 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="admin-entry"
         options={{
-          href: user?.isAdmin ? undefined : null,
+          href: isAdmin ? undefined : null,
           title: "Admin",
           tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="shield-account" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="altcoins"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="markets/[market]"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="markets/altcoins"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

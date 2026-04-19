@@ -3,7 +3,7 @@ import { AnalysisRequest, PaymentStatus, RequestStatus } from "@/types/domain";
 
 type AnalysisRequestRow = {
   id: string;
-  user_id: string;
+  user_id: string | null;
   requester_email: string | null;
   asset_input: string;
   coin_symbol: string;
@@ -28,7 +28,7 @@ type AnalysisRequestRow = {
 function mapRequest(row: AnalysisRequestRow): AnalysisRequest {
   return {
     id: row.id,
-    userId: row.user_id,
+    userId: row.user_id ?? "guest",
     requesterEmail: row.requester_email ?? undefined,
     ticker: row.coin_symbol,
     assetInput: row.asset_input,
@@ -67,7 +67,7 @@ export async function fetchAnalysisRequests() {
 }
 
 export async function createAnalysisRequest(input: {
-  user_id: string;
+  user_id?: string;
   requester_email?: string;
   asset_input: string;
   coin_symbol: string;
@@ -77,13 +77,19 @@ export async function createAnalysisRequest(input: {
   payment_proof?: string;
   payment_reference?: string;
 }) {
+  const payload = {
+    ...input,
+    user_id: input.user_id ?? null,
+    requester_email: input.requester_email ?? null,
+    payment_proof: input.payment_proof ?? null,
+    payment_reference: input.payment_reference ?? null,
+    payment_status: "pending",
+    requested_at: new Date().toISOString(),
+  };
+
   const result = await supabase
     .from("analysis_requests")
-    .insert({
-      ...input,
-      payment_status: "pending",
-      requested_at: new Date().toISOString(),
-    })
+    .insert(payload)
     .select(
       "id, user_id, requester_email, asset_input, coin_symbol, tier, notes, status, delivery_type, payment_status, payment_proof, payment_reference, delivery_notes, delivery_video_url, admin_notes, delivery_url, requested_at, fulfilled_at, delivered_at, updated_at, created_at",
     )
@@ -125,7 +131,7 @@ export async function updateAnalysisRequest(
     .select(
       "id, user_id, requester_email, asset_input, coin_symbol, tier, notes, status, delivery_type, payment_status, payment_proof, payment_reference, delivery_notes, delivery_video_url, admin_notes, delivery_url, requested_at, fulfilled_at, delivered_at, updated_at, created_at",
     )
-    .single();
+    .maybeSingle();
 
   return {
     ...result,

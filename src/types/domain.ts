@@ -7,6 +7,7 @@ export type RequestStatus = "pending" | "accepted" | "delivered" | "cancelled";
 export type RequestTier = 2 | 5 | 10;
 
 export type PaymentStatus = "pending" | "paid" | "refunded";
+export type FavoriteContentType = "analysis" | "review" | "altcoin";
 
 export type RankName =
   | "Recruit"
@@ -33,9 +34,23 @@ export interface AfterActionReview {
   market: Market;
   title: string;
   shortText: string;
+  bodyText?: string;
   chartImage: string;
+  videoUrl?: string;
   publishedAt: string;
   isFree: true;
+}
+
+export interface AltcoinPost {
+  id: string;
+  coinSymbol: string;
+  title: string;
+  summary: string;
+  bodyText: string;
+  chartImage: string;
+  videoUrl?: string;
+  isPremium: boolean;
+  publishedAt: string;
 }
 
 export interface AnalysisRequest {
@@ -67,6 +82,10 @@ export interface MembershipStats {
   userId: string;
   currentPlan: UserPlan;
   currentRank: RankName;
+  planLabel?: string;
+  startedAt?: string;
+  expiresAt?: string;
+  renewalMode?: "manual" | "none";
   loginStreak: number;
   totalViews: number;
   premiumViews: number;
@@ -92,6 +111,17 @@ export interface AppUser {
   memberProfileVisibility?: "members" | "private";
 }
 
+export interface FavoriteItem {
+  id: string;
+  userId: string;
+  contentType: FavoriteContentType;
+  contentId: string;
+  title: string;
+  subtitle?: string;
+  marketLabel?: string;
+  createdAt: string;
+}
+
 export interface AdminUserRecord {
   id: string;
   email: string;
@@ -105,6 +135,8 @@ export interface PaymentRequest {
   userId: string;
   type: "membership_upgrade";
   planTarget: UserPlan;
+  planLabel?: string;
+  durationDays?: number;
   fullName: string;
   contactEmail: string;
   paymentMethod: "paypal" | "usdt" | "redotpay";
@@ -134,4 +166,35 @@ export interface InAppNotification {
   body: string;
   createdAt: string;
   read: boolean;
+}
+
+export interface ContactMessage {
+  id: string;
+  userId?: string;
+  fullName: string;
+  email: string;
+  subject: string;
+  message: string;
+  status: "new" | "read" | "replied";
+  createdAt: string;
+  replies?: ContactMessageReply[];
+}
+
+export interface ContactMessageReply {
+  id: string;
+  messageId: string;
+  senderRole: "admin" | "member";
+  senderName: string;
+  body: string;
+  createdAt: string;
+}
+
+export interface ContentComment {
+  id: string;
+  contentType: "review" | "analysis" | "altcoin";
+  contentId: string;
+  userId?: string;
+  authorName: string;
+  body: string;
+  createdAt: string;
 }

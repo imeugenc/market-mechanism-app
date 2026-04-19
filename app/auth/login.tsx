@@ -47,7 +47,7 @@ export default function LoginScreen() {
         return;
       }
 
-      router.replace("/");
+      router.replace("/(tabs)");
     } catch (error) {
       setLoading(false);
       setMessage(error instanceof Error ? error.message : "Autentificarea a eșuat.");
@@ -80,6 +80,7 @@ export default function LoginScreen() {
         />
 
         <PrimaryButton label={loading ? "Se autentifică..." : "Intră în cont"} onPress={() => void handleLogin()} />
+        <PrimaryButton label="Ai uitat parola?" variant="ghost" onPress={() => router.push("/auth/forgot-password")} />
         <PrimaryButton label="Creează cont" variant="ghost" onPress={() => router.push("/auth/register")} />
 
         {message ? <Text style={styles.message}>{message}</Text> : null}

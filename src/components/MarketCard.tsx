@@ -8,7 +8,7 @@ import { colors, radii, typography } from "@/theme";
 export function MarketCard({ market }: { market: Market }) {
   return (
     <Pressable
-      onPress={() => router.push(`/market/${market}`)}
+      onPress={() => router.push(`/(tabs)/markets/${market}`)}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
       <View style={styles.topRow}>

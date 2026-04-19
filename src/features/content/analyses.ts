@@ -1,5 +1,6 @@
 import { DailyAnalysis, Market } from "@/types/domain";
 import { supabase } from "@/lib/supabase";
+import { normalizeIsoDate } from "@/lib/dates";
 
 type DailyAnalysisRow = {
   id: string;
@@ -17,6 +18,8 @@ type DailyAnalysisRow = {
 };
 
 function mapDailyAnalysis(row: DailyAnalysisRow): DailyAnalysis {
+  const fallbackDate = normalizeIsoDate(row.created_at);
+
   return {
     id: row.id,
     market: row.market,
@@ -25,7 +28,7 @@ function mapDailyAnalysis(row: DailyAnalysisRow): DailyAnalysis {
     chartImages: row.chart_images ?? undefined,
     videoUrl: row.video_url,
     isPremium: row.is_premium ?? row.premium_only ?? true,
-    publishedAt: row.published_at ?? row.created_at ?? new Date().toISOString(),
+    publishedAt: normalizeIsoDate(row.published_at, fallbackDate),
     tags: row.tags ?? undefined,
     status: row.status ?? undefined,
   };
@@ -54,6 +57,7 @@ export async function publishDailyAnalysis(input: {
   status?: "Live" | "Plan" | "Watch";
   published_at?: string;
 }) {
+  const publishedAt = normalizeIsoDate(input.published_at);
   const result = await supabase
     .from("daily_analyses")
     .insert({
@@ -61,7 +65,7 @@ export async function publishDailyAnalysis(input: {
       summary: input.summary ?? null,
       chart_images: input.chart_images ?? [],
       premium_only: input.is_premium,
-      published_at: input.published_at ?? new Date().toISOString(),
+      published_at: publishedAt,
       tags: input.tags ?? [],
       status: input.status ?? "Live",
     })
@@ -88,6 +92,7 @@ export async function updateDailyAnalysis(
     published_at?: string;
   },
 ) {
+  const publishedAt = normalizeIsoDate(input.published_at);
   const result = await supabase
     .from("daily_analyses")
     .update({
@@ -95,6 +100,7 @@ export async function updateDailyAnalysis(
       summary: input.summary ?? null,
       chart_images: input.chart_images ?? [],
       premium_only: input.is_premium,
+      published_at: publishedAt,
       tags: input.tags ?? [],
       status: input.status ?? "Live",
     })

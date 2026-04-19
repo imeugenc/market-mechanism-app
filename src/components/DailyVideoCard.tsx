@@ -9,16 +9,38 @@ import { colors, radii, typography } from "@/theme";
 export function DailyVideoCard({
   item,
   locked,
+  favorited,
+  onToggleFavorite,
 }: {
   item: DailyAnalysis;
   locked?: boolean;
+  favorited?: boolean;
+  onToggleFavorite?: () => void;
 }) {
   return (
     <View style={styles.card}>
       <View style={styles.playerShell}>
         <View style={styles.playerTopRow}>
-          <Text style={styles.market}>{item.market}</Text>
-          <Text style={styles.date}>{formatDailyLabel(item.publishedAt)}</Text>
+          <View style={styles.playerMeta}>
+            <Text style={styles.market}>{item.market}</Text>
+            <Text style={styles.date}>{formatDailyLabel(item.publishedAt)}</Text>
+          </View>
+          {onToggleFavorite ? (
+            <Pressable
+              onPress={(event) => {
+                event.stopPropagation?.();
+                onToggleFavorite();
+              }}
+              hitSlop={10}
+              style={styles.favoriteButton}
+            >
+              <MaterialCommunityIcons
+                name={favorited ? "star" : "star-outline"}
+                size={20}
+                color={favorited ? colors.goldBright : colors.textMuted}
+              />
+            </Pressable>
+          ) : null}
         </View>
         <View style={styles.playerCenter}>
           <View style={styles.playWrap}>
@@ -68,6 +90,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
+  playerMeta: {
+    gap: 6,
+  },
   market: {
     color: colors.gold,
     fontSize: typography.small,
@@ -78,6 +103,16 @@ const styles = StyleSheet.create({
   date: {
     color: colors.textMuted,
     fontSize: typography.small,
+  },
+  favoriteButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.bgMuted,
   },
   playerCenter: {
     alignItems: "center",

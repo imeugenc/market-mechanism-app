@@ -1,5 +1,7 @@
 import { router } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 import { ContentPreviewCard } from "@/components/ContentPreviewCard";
 import { MarketCard } from "@/components/MarketCard";
@@ -10,14 +12,18 @@ import { ReviewCard } from "@/components/ReviewCard";
 import { Screen } from "@/components/Screen";
 import { SectionHeader } from "@/components/SectionHeader";
 import { CORE_MARKETS } from "@/constants/markets";
-import { isPremiumLocked, latestAnalysisByMarket } from "@/features/content/access";
+import { groupReviewsByDate, isPremiumLocked, latestAnalysisByMarket } from "@/features/content/access";
 import { displayPlan, displayRank } from "@/lib/display";
 import { formatDailyLabel } from "@/lib/format";
 import { useAppState } from "@/providers/AppProvider";
 import { colors, spacing, typography } from "@/theme";
 
+const ONBOARDING_STORAGE_KEY = "execution-edge:onboarding-complete";
+
 export default function HomeScreen() {
-  const { analyses, reviews, membership } = useAppState();
+  const [onboardingReady, setOnboardingReady] = useState(false);
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
+  const { analyses, favorites, reviews, membership, toggleFavorite, user } = useAppState();
   const latestPerMarket = latestAnalysisByMarket(analyses);
   const todayLabel = latestPerMarket[0] ? formatDailyLabel(latestPerMarket[0].publishedAt) : "";
   const premiumLocked = membership.currentPlan === "FREE";
@@ -26,6 +32,49 @@ export default function HomeScreen() {
   const visibleReviews = [...reviews].sort(
     (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
   );
+  const reviewGroups = groupReviewsByDate(visibleReviews);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void (async () => {
+      const stored = await AsyncStorage.getItem(ONBOARDING_STORAGE_KEY);
+
+      if (cancelled) {
+        return;
+      }
+
+      setHasCompletedOnboarding(stored === "true");
+      setOnboardingReady(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!onboardingReady || hasCompletedOnboarding) {
+      return;
+    }
+
+    router.replace("/onboarding");
+  }, [hasCompletedOnboarding, onboardingReady]);
+
+  if (!onboardingReady) {
+    return (
+      <Screen scroll={false}>
+        <View style={styles.loadingCard}>
+          <ActivityIndicator color={colors.gold} />
+          <Text style={styles.loadingText}>Se pregătește ecranul principal…</Text>
+        </View>
+      </Screen>
+    );
+  }
+
+  if (!hasCompletedOnboarding) {
+    return null;
+  }
 
   return (
     <Screen>
@@ -61,8 +110,10 @@ export default function HomeScreen() {
           </View>
         </View>
         <View style={styles.buttonRow}>
-          <PrimaryButton label="Deblochează Premium" onPress={() => router.push("/membership")} />
-          <PrimaryButton label="Consolă creator" variant="ghost" onPress={() => router.push("/admin")} />
+          <PrimaryButton label="Deblochează Premium" onPress={() => router.push("/(tabs)/membership")} />
+          {user?.isAdmin ? (
+            <PrimaryButton label="Consolă creator" variant="ghost" onPress={() => router.push("/admin")} />
+          ) : null}
         </View>
       </PremiumCard>
 
@@ -77,8 +128,26 @@ export default function HomeScreen() {
           Aici vezi recapitulările publice după mișcare. Briefingul zilnic rămâne Premium, dar review-urile gratuite sunt mereu la vedere.
         </Text>
       </View>
-      {visibleReviews.length ? visibleReviews.map((review) => (
-        <ReviewCard key={review.id} item={review} />
+      {reviewGroups.length ? reviewGroups.map((group) => (
+        <View key={group.dateKey} style={styles.reviewGroup}>
+          <Text style={styles.reviewGroupTitle}>{formatDailyLabel(group.reviews[0].publishedAt)}</Text>
+          {group.reviews.map((review) => (
+            <ReviewCard
+              key={review.id}
+              item={review}
+              favorited={favorites.some((item) => item.contentType === "review" && item.contentId === review.id)}
+              onToggleFavorite={() =>
+                void toggleFavorite({
+                  contentType: "review",
+                  contentId: review.id,
+                  title: review.title,
+                  subtitle: review.shortText,
+                  marketLabel: review.market,
+                })
+              }
+            />
+          ))}
+        </View>
       )) : (
         <View style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>Nu există încă review-uri publicate</Text>
@@ -106,6 +175,16 @@ export default function HomeScreen() {
           key={featuredPremium.id}
           item={featuredPremium}
           locked={isPremiumLocked(membership.currentPlan, featuredPremium)}
+          favorited={favorites.some((item) => item.contentType === "analysis" && item.contentId === featuredPremium.id)}
+          onToggleFavorite={() =>
+            void toggleFavorite({
+              contentType: "analysis",
+              contentId: featuredPremium.id,
+              title: featuredPremium.title,
+              subtitle: "Analiza de azi",
+              marketLabel: featuredPremium.market,
+            })
+          }
         />
       ) : null}
       {compactPremiumItems.length ? (
@@ -226,6 +305,17 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: spacing.sm,
   },
+  loadingCard: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+  },
+  loadingText: {
+    color: colors.textSoft,
+    fontSize: typography.body,
+    lineHeight: 22,
+  },
   compactPremiumGrid: {
     gap: spacing.sm,
   },
@@ -267,6 +357,14 @@ const styles = StyleSheet.create({
   },
   grid: {
     gap: spacing.md,
+  },
+  reviewGroup: {
+    gap: spacing.sm,
+  },
+  reviewGroupTitle: {
+    color: colors.textStrong,
+    fontSize: typography.section,
+    fontWeight: "800",
   },
   banner: {
     borderRadius: 22,

@@ -6,11 +6,11 @@ export function displayPlan(plan: UserPlan) {
 
 export function displayRank(rank: RankName) {
   const labels: Record<RankName, string> = {
-    Recruit: "Recrut",
-    Disciplined: "Disciplinat",
-    Executor: "Executor",
-    Elite: "Elită",
-    "War Machine": "Mașină de război",
+    Recruit: "Observator",
+    Disciplined: "Membru activ",
+    Executor: "Operator",
+    Elite: "Avansat",
+    "War Machine": "Specialist",
   };
 
   return labels[rank];

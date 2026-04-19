@@ -53,7 +53,7 @@ export default function RegisterScreen() {
         return;
       }
 
-      router.replace("/");
+      router.replace("/(tabs)");
     } catch (error) {
       setLoading(false);
       setMessage(error instanceof Error ? error.message : "Crearea contului a eșuat.");
@@ -65,7 +65,9 @@ export default function RegisterScreen() {
       <PremiumCard>
         <Text style={styles.eyebrow}>Acces nou</Text>
         <Text style={styles.title}>Creează cont</Text>
-        <Text style={styles.body}>Conturile noi pornesc cu rol `user` și plan `free`.</Text>
+        <Text style={styles.body}>
+          Deschizi un cont curat pentru review-urile gratuite, istoricul tău de cereri și activarea Premium după validarea plății.
+        </Text>
 
         <TextInput
           value={email}

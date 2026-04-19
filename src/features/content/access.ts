@@ -1,4 +1,5 @@
-import { DailyAnalysis, UserPlan } from "@/types/domain";
+import { AfterActionReview, DailyAnalysis, UserPlan } from "@/types/domain";
+import { getSafeDateKey, getSafeTimestamp, normalizeIsoDate } from "@/lib/dates";
 
 export function canAccessPremiumContent(plan: UserPlan, item: DailyAnalysis) {
   return !item.isPremium || plan === "PRO";
@@ -14,15 +15,19 @@ export function isPremiumLocked(plan: UserPlan, item: DailyAnalysis) {
 
 export function groupAnalysesByDate(items: DailyAnalysis[]) {
   const sorted = [...items].sort(
-    (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
+    (a, b) => getSafeTimestamp(b.publishedAt) - getSafeTimestamp(a.publishedAt),
   );
 
   const map = new Map<string, DailyAnalysis[]>();
 
   for (const item of sorted) {
-    const key = new Date(item.publishedAt).toISOString().slice(0, 10);
+    const normalizedItem = {
+      ...item,
+      publishedAt: normalizeIsoDate(item.publishedAt),
+    };
+    const key = getSafeDateKey(normalizedItem.publishedAt);
     const bucket = map.get(key) ?? [];
-    bucket.push(item);
+    bucket.push(normalizedItem);
     map.set(key, bucket);
   }
 
@@ -34,7 +39,7 @@ export function groupAnalysesByDate(items: DailyAnalysis[]) {
 
 export function latestAnalysisByMarket(items: DailyAnalysis[]) {
   const sorted = [...items].sort(
-    (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
+    (a, b) => getSafeTimestamp(b.publishedAt) - getSafeTimestamp(a.publishedAt),
   );
   const seen = new Set<string>();
 
@@ -45,4 +50,28 @@ export function latestAnalysisByMarket(items: DailyAnalysis[]) {
     seen.add(item.market);
     return true;
   });
+}
+
+export function groupReviewsByDate(items: AfterActionReview[]) {
+  const sorted = [...items].sort(
+    (a, b) => getSafeTimestamp(b.publishedAt) - getSafeTimestamp(a.publishedAt),
+  );
+
+  const map = new Map<string, AfterActionReview[]>();
+
+  for (const item of sorted) {
+    const normalizedItem = {
+      ...item,
+      publishedAt: normalizeIsoDate(item.publishedAt),
+    };
+    const key = getSafeDateKey(normalizedItem.publishedAt);
+    const bucket = map.get(key) ?? [];
+    bucket.push(normalizedItem);
+    map.set(key, bucket);
+  }
+
+  return [...map.entries()].map(([dateKey, reviews]) => ({
+    dateKey,
+    reviews,
+  }));
 }

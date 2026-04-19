@@ -1,0 +1,4 @@
+project_id = "execution-edge"
+
+[functions.send-email-queue]
+verify_jwt = false

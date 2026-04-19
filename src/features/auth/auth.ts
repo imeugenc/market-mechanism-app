@@ -1,9 +1,34 @@
 import * as Linking from "expo-linking";
-
 import { supabase } from "@/lib/supabase";
 
+export const NATIVE_CALLBACK_URL = Linking.createURL("auth/callback");
+export const NATIVE_RESET_URL = Linking.createURL("auth/reset-password");
+
 function createAuthRedirectUrl() {
-  return Linking.createURL("/auth/callback");
+  return NATIVE_CALLBACK_URL;
+}
+
+export function parseAuthTokensFromUrl(url?: string | null) {
+  if (!url) {
+    return {
+      accessToken: undefined,
+      refreshToken: undefined,
+      type: undefined,
+    };
+  }
+
+  const [base, fragment = ""] = url.split("#");
+  const queryIndex = base.indexOf("?");
+  const query = queryIndex >= 0 ? base.slice(queryIndex + 1) : "";
+  const params = new URLSearchParams([query, fragment].filter(Boolean).join("&"));
+
+  return {
+    accessToken: params.get("access_token") ?? undefined,
+    refreshToken: params.get("refresh_token") ?? undefined,
+    type: params.get("type") ?? undefined,
+    code: params.get("code") ?? undefined,
+    tokenHash: params.get("token_hash") ?? params.get("token") ?? undefined,
+  };
 }
 
 export function formatAuthErrorMessage(error: unknown) {
@@ -60,6 +85,59 @@ export async function sendMagicLink(email: string) {
     options: {
       emailRedirectTo: createAuthRedirectUrl(),
     },
+  });
+}
+
+export async function sendPasswordResetEmail(email: string) {
+  return supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: NATIVE_RESET_URL,
+  });
+}
+
+export async function applyAuthRedirectSession(input: {
+  accessToken: string;
+  refreshToken: string;
+}) {
+  return supabase.auth.setSession({
+    access_token: input.accessToken,
+    refresh_token: input.refreshToken,
+  });
+}
+
+export async function establishRecoverySession(input: {
+  accessToken?: string;
+  refreshToken?: string;
+  code?: string;
+  tokenHash?: string;
+  type?: string;
+}) {
+  if (input.accessToken && input.refreshToken) {
+    return applyAuthRedirectSession({
+      accessToken: input.accessToken,
+      refreshToken: input.refreshToken,
+    });
+  }
+
+  if (input.code) {
+    return supabase.auth.exchangeCodeForSession(input.code);
+  }
+
+  if (input.tokenHash && input.type) {
+    return supabase.auth.verifyOtp({
+      token_hash: input.tokenHash,
+      type: input.type as "signup" | "recovery" | "magiclink" | "invite" | "email_change" | "email",
+    });
+  }
+
+  return {
+    data: { session: null, user: null },
+    error: new Error("Linkul de resetare nu conține o sesiune validă."),
+  };
+}
+
+export async function updatePassword(password: string) {
+  return supabase.auth.updateUser({
+    password,
   });
 }
 

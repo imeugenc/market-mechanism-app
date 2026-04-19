@@ -54,7 +54,7 @@ export default function OnboardingScreen() {
     }
 
     await completeOnboarding();
-    router.replace("/");
+    router.replace("/(tabs)");
   };
 
   return (

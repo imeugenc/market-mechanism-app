@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Linking, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Linking, StyleSheet, Text, TextInput, View } from "react-native";
 import { BlurView } from "expo-blur";
 
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -8,6 +8,7 @@ import { PrimaryButton } from "@/components/PrimaryButton";
 import { Screen } from "@/components/Screen";
 import { SectionHeader } from "@/components/SectionHeader";
 import { TierCard } from "@/components/TierCard";
+import { pickAndUploadPaymentProof } from "@/features/storage/paymentProofs";
 import { REQUEST_TIERS } from "@/features/requests/tiers";
 import { useAppState } from "@/providers/AppProvider";
 import { colors, radii, spacing, typography } from "@/theme";
@@ -21,7 +22,9 @@ const statusStyles: Record<RequestStatus, { label: string; bg: string; color: st
 };
 
 export default function RequestsScreen() {
-  const { createRequest, notifications, personalRequests, requests, user } = useAppState();
+  const { createRequest, notifications, personalRequests, requests, session, user } = useAppState();
+  const activeEmail = session?.user?.email ?? user?.email ?? "";
+  const isAuthenticated = Boolean(session?.user);
   const [assetInput, setAssetInput] = useState("");
   const [requesterEmail, setRequesterEmail] = useState("");
   const [tier, setTier] = useState<RequestTier>(5);
@@ -29,10 +32,11 @@ export default function RequestsScreen() {
   const [paymentProof, setPaymentProof] = useState("");
   const [paymentReference, setPaymentReference] = useState("");
   const [error, setError] = useState("");
+  const [uploadingProof, setUploadingProof] = useState(false);
 
   const selectedTier = REQUEST_TIERS.find((item) => item.tier === tier) ?? REQUEST_TIERS[1];
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const trimmed = assetInput.trim();
 
     if (trimmed.length < 2) {
@@ -40,12 +44,12 @@ export default function RequestsScreen() {
       return;
     }
 
-    if (!user && requesterEmail.trim().length < 5) {
+    if (!isAuthenticated && requesterEmail.trim().length < 5) {
       setError("Te rugăm să introduci o adresă de email");
       return;
     }
 
-    createRequest({
+    const result = await createRequest({
       assetInput: trimmed,
       requesterEmail: requesterEmail.trim(),
       tier,
@@ -53,11 +57,42 @@ export default function RequestsScreen() {
       paymentProof: paymentProof.trim(),
       paymentReference: paymentReference.trim(),
     });
+
+    if (!result.success) {
+      setError(result.message);
+      return;
+    }
+
     setAssetInput("");
     setRequesterEmail("");
     setNotes("");
     setPaymentProof("");
     setPaymentReference("");
+    setError("");
+    Alert.alert(
+      "Solicitare primită",
+      "Cererea a fost salvată și apare acum în istoricul tău. Adminul o vede în panoul de administrare, iar statusul va fi actualizat în aplicație.",
+    );
+  };
+
+  const uploadProof = async () => {
+    const activeUserId = session?.user?.id ?? user?.id;
+
+    if (!activeUserId) {
+      setError("Autentifică-te înainte să încarci dovada plății.");
+      return;
+    }
+
+    setUploadingProof(true);
+    const result = await pickAndUploadPaymentProof(activeUserId);
+    setUploadingProof(false);
+
+    if (!result.success || !result.url) {
+      setError(result.message);
+      return;
+    }
+
+    setPaymentProof(result.url);
     setError("");
   };
 
@@ -71,7 +106,7 @@ export default function RequestsScreen() {
       <View style={styles.list}>
         {personalRequests.length ? (
           personalRequests.map((item) => {
-            const hasAccess = user?.isAdmin || item.userEmail.toLowerCase() === (user?.email ?? "").toLowerCase();
+            const hasAccess = user?.isAdmin || item.userEmail.toLowerCase() === activeEmail.toLowerCase();
 
             return (
               <View key={item.id} style={styles.personalCard}>
@@ -135,7 +170,7 @@ export default function RequestsScreen() {
       <SectionHeader
         eyebrow="Cerere nouă"
         title="Solicitare personală nouă"
-        caption="Selectezi nivelul, trimiți cererea și urmărești statusul direct în aplicație."
+        caption="Selectezi nivelul, trimiți cererea, iar apoi urmărești tot fluxul direct în aplicație: înregistrare, acceptare, livrare sau anulare."
       />
       <View style={styles.promiseCard}>
         <Text style={styles.promiseTitle}>Livrare în maximum 8 ore de la solicitare</Text>
@@ -165,18 +200,15 @@ export default function RequestsScreen() {
           <Text style={styles.stepDetail}>Analiză video premium: $10</Text>
         </View>
         <Text style={styles.manualConfirmNote}>Confirmarea plății este manuală și poate dura până la 24h.</Text>
+        <Text style={styles.manualConfirmNote}>
+          Cererile se salvează în aplicație și apar în panoul de administrare. Structura pentru email există, dar livrarea și statusurile se urmăresc în primul rând în aplicație.
+        </Text>
       </View>
 
       <View style={styles.form}>
         <View style={styles.formHeader}>
-          <View>
-            <Text style={styles.formTitle}>Construiește cererea</Text>
-            <Text style={styles.formCaption}>Interfață clară, rapidă și orientată spre decizie.</Text>
-          </View>
-          <View style={styles.priceChip}>
-            <Text style={styles.priceChipLabel}>Selectat</Text>
-            <Text style={styles.priceChipValue}>{formatCurrency(tier)}</Text>
-          </View>
+          <Text style={styles.formTitle}>Construiește cererea</Text>
+          <Text style={styles.formCaption}>Interfață clară, rapidă și orientată spre decizie.</Text>
         </View>
 
         <Text style={styles.label}>Activ / Ticker</Text>
@@ -195,7 +227,7 @@ export default function RequestsScreen() {
         />
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        {!user ? (
+        {!isAuthenticated ? (
           <>
             <Text style={styles.label}>Adresa de email</Text>
             <TextInput
@@ -216,7 +248,7 @@ export default function RequestsScreen() {
         ) : (
           <View style={styles.summaryCard}>
             <Text style={styles.summaryEyebrow}>Confirmare pe email</Text>
-            <Text style={styles.summaryBody}>Cererea va fi confirmată automat pe adresa: {user.email}</Text>
+            <Text style={styles.summaryBody}>Cererea va fi confirmată automat pe adresa: {activeEmail}</Text>
           </View>
         )}
 
@@ -243,6 +275,9 @@ export default function RequestsScreen() {
           </Text>
           <Text style={styles.summaryBody}>{selectedTier.description}</Text>
           <Text style={styles.summaryMeta}>{selectedTier.deliveryLabel} • {selectedTier.turnaround}</Text>
+          <Text style={styles.summaryBody}>
+            După trimitere, cererea intră în Admin. Acolo este confirmată, acceptată și apoi livrată către tine.
+          </Text>
         </View>
 
         <Text style={styles.label}>Detalii suplimentare</Text>
@@ -264,6 +299,11 @@ export default function RequestsScreen() {
           placeholder="Introdu dovada plății sau menționează captura trimisă"
           placeholderTextColor="#6F6A5C"
         />
+        <PrimaryButton
+          label={uploadingProof ? "Se încarcă dovada..." : "Încarcă captură / dovadă"}
+          variant="ghost"
+          onPress={() => void uploadProof()}
+        />
 
         <Text style={styles.label}>Nr. tranzacției</Text>
         <TextInput
@@ -275,7 +315,10 @@ export default function RequestsScreen() {
           autoCapitalize="none"
         />
 
-        <PrimaryButton label={`Trimite • ${formatCurrency(tier)}`} onPress={handleSubmit} />
+        <PrimaryButton
+          label={tier === 2 ? "Cere analiza rapidă" : tier === 5 ? "Cere analiza personalizată" : "Cere analiza premium"}
+          onPress={handleSubmit}
+        />
       </View>
 
       {notifications[0] ? (
@@ -321,7 +364,11 @@ export default function RequestsScreen() {
             {request.status === "delivered" ? <Text style={styles.readyLabel}>Analiza ta este gata</Text> : null}
             {request.adminNotes ? <Text style={styles.deliveryNote}>{request.adminNotes}</Text> : null}
             {request.deliveryUrl && request.status === "delivered" ? (
-              <Text style={styles.deliveryLink}>Livrare: {request.deliveryUrl}</Text>
+              <PrimaryButton
+                label="Vezi video"
+                variant="ghost"
+                onPress={() => void Linking.openURL(request.deliveryUrl!)}
+              />
             ) : null}
           </View>
         ))}
