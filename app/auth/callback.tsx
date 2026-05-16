@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Linking from "expo-linking";
 
@@ -13,6 +13,8 @@ export default function AuthCallbackScreen() {
   const { authReady, session, user } = useAppState();
   const isAdmin = user?.isAdmin || isOwnerEmail(session?.user?.email);
   const incomingUrl = Linking.useURL();
+  const currentUrl =
+    Platform.OS === "web" && typeof window !== "undefined" ? window.location.href : incomingUrl;
   const { access_token, refresh_token, code, token_hash, type } = useLocalSearchParams<{
     access_token?: string;
     refresh_token?: string;
@@ -20,7 +22,7 @@ export default function AuthCallbackScreen() {
     token_hash?: string;
     type?: string;
   }>();
-  const parsedTokens = parseAuthTokensFromUrl(incomingUrl);
+  const parsedTokens = parseAuthTokensFromUrl(currentUrl);
   const accessToken = access_token ?? parsedTokens.accessToken;
   const refreshToken = refresh_token ?? parsedTokens.refreshToken;
   const authCode = code ?? parsedTokens.code;

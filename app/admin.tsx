@@ -277,7 +277,7 @@ export default function AdminScreen() {
   }
 
   return (
-    <Screen>
+    <Screen webMaxWidth={1320}>
       <PremiumCard>
         <View style={styles.actionButtons}>
           <PrimaryButton label="Înapoi în aplicație" variant="ghost" onPress={() => router.replace("/(tabs)")} />

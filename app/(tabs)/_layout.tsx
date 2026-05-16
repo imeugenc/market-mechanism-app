@@ -1,5 +1,6 @@
 import { FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { Platform } from "react-native";
 
 import { isOwnerEmail } from "@/constants/access";
 import { useAppState } from "@/providers/AppProvider";
@@ -8,16 +9,19 @@ import { colors } from "@/theme";
 export default function TabsLayout() {
   const { session, user } = useAppState();
   const isAdmin = user?.isAdmin || isOwnerEmail(session?.user?.email);
+  const isWeb = Platform.OS === "web";
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
+        tabBarLabelPosition: isWeb ? "beside-icon" : "below-icon",
         tabBarStyle: {
           backgroundColor: "#090909",
           borderTopColor: "rgba(212, 175, 55, 0.12)",
-          height: 88,
+          height: isWeb ? 72 : 88,
           paddingTop: 8,
+          paddingBottom: isWeb ? 8 : 0,
         },
         tabBarActiveTintColor: colors.gold,
         tabBarInactiveTintColor: "#6F6A5C",

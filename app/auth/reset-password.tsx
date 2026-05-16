@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
-import { StyleSheet, Text, TextInput } from "react-native";
+import { Platform, StyleSheet, Text, TextInput } from "react-native";
 import * as Linking from "expo-linking";
 
 import { PremiumCard } from "@/components/PremiumCard";
@@ -13,6 +13,8 @@ import { colors, radii, typography } from "@/theme";
 export default function ResetPasswordScreen() {
   const { session } = useAppState();
   const incomingUrl = Linking.useURL();
+  const currentUrl =
+    Platform.OS === "web" && typeof window !== "undefined" ? window.location.href : incomingUrl;
   const { access_token, refresh_token, code, token_hash, type } = useLocalSearchParams<{
     access_token?: string;
     refresh_token?: string;
@@ -20,7 +22,7 @@ export default function ResetPasswordScreen() {
     token_hash?: string;
     type?: string;
   }>();
-  const parsedTokens = parseAuthTokensFromUrl(incomingUrl);
+  const parsedTokens = parseAuthTokensFromUrl(currentUrl);
   const accessToken = access_token ?? parsedTokens.accessToken;
   const refreshToken = refresh_token ?? parsedTokens.refreshToken;
   const authCode = code ?? parsedTokens.code;

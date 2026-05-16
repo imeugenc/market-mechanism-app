@@ -1,11 +1,37 @@
 import * as Linking from "expo-linking";
+import { Platform } from "react-native";
 import { supabase } from "@/lib/supabase";
 
 export const NATIVE_CALLBACK_URL = Linking.createURL("auth/callback");
 export const NATIVE_RESET_URL = Linking.createURL("auth/reset-password");
+const SITE_URL = process.env.EXPO_PUBLIC_SITE_URL?.trim().replace(/\/+$/, "");
+
+function normalizeRedirectPath(path: string) {
+  return path.replace(/^\/+/, "");
+}
+
+function createWebRedirectUrl(path: string) {
+  if (!SITE_URL) {
+    return null;
+  }
+
+  return `${SITE_URL}/${normalizeRedirectPath(path)}`;
+}
+
+function createPlatformRedirectUrl(path: string, nativeFallback: string) {
+  if (Platform.OS === "web") {
+    return createWebRedirectUrl(path) ?? nativeFallback;
+  }
+
+  return nativeFallback;
+}
 
 function createAuthRedirectUrl() {
-  return NATIVE_CALLBACK_URL;
+  return createPlatformRedirectUrl("auth/callback", NATIVE_CALLBACK_URL);
+}
+
+function createPasswordResetRedirectUrl() {
+  return createPlatformRedirectUrl("auth/reset-password", NATIVE_RESET_URL);
 }
 
 export function parseAuthTokensFromUrl(url?: string | null) {
@@ -90,7 +116,7 @@ export async function sendMagicLink(email: string) {
 
 export async function sendPasswordResetEmail(email: string) {
   return supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: NATIVE_RESET_URL,
+    redirectTo: createPasswordResetRedirectUrl(),
   });
 }
 

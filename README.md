@@ -1,6 +1,6 @@
 # Execution Edge
 
-Execution Edge is a premium mobile app for daily trading analysis across BTC, ETH, NQ, and ES. This scaffold is optimized for a solo founder using Expo + React Native + TypeScript with a Supabase backend and subscription-ready architecture.
+Execution Edge este o aplicație premium construită cu Expo Router + React Native + TypeScript, cu backend Supabase, pentru analiză zilnică pe BTC, ETH, NQ și ES. Proiectul păstrează paritatea mobile și este pregătit incremental pentru lansare web-first.
 
 ## Short Build Plan
 
@@ -64,6 +64,83 @@ Execution Edge is a premium mobile app for daily trading analysis across BTC, ET
 7. Admin publishing flow
 8. Supabase wiring and deployment polish
 
-## Run Instructions
+## Local Run
 
-Detailed local run instructions are included after implementation is complete. If dependencies are not installed yet, run `npm install` and then `npm run start`.
+### Mobile
+
+```bash
+npm start
+```
+
+Pentru iOS dev client:
+
+```bash
+npm run ios
+```
+
+### Web
+
+```bash
+npm run web
+```
+
+### Web Production Build
+
+```bash
+npm run build:web
+```
+
+Outputul web este generat în:
+
+- `dist/`
+
+## Environment Variables
+
+Configurează în `.env` sau în platforma de deploy:
+
+```bash
+EXPO_PUBLIC_SUPABASE_URL=...
+EXPO_PUBLIC_SUPABASE_ANON_KEY=...
+EXPO_PUBLIC_SITE_URL=https://app.marketmechanism.xyz
+```
+
+## Supabase Auth Redirect URLs
+
+Adaugă în Supabase Auth -> URL Configuration exact aceste URL-uri:
+
+- `http://localhost:8081/auth/callback`
+- `http://localhost:8081/auth/reset-password`
+- `https://app.marketmechanism.xyz/auth/callback`
+- `https://app.marketmechanism.xyz/auth/reset-password`
+
+## Vercel Deployment
+
+Configurare minimă recomandată:
+
+- Build command: `npm run build:web`
+- Output directory: `dist`
+
+Environment variables în Vercel:
+
+- `EXPO_PUBLIC_SUPABASE_URL`
+- `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+- `EXPO_PUBLIC_SITE_URL=https://app.marketmechanism.xyz`
+
+## Web Auth Strategy
+
+- Pe web, confirmarea de email folosește:
+  - `${EXPO_PUBLIC_SITE_URL}/auth/callback`
+- Pe web, resetarea parolei folosește:
+  - `${EXPO_PUBLIC_SITE_URL}/auth/reset-password`
+- Pe mobile, aplicația păstrează deep links native prin `Linking.createURL(...)`
+
+## Quick Verification After Web Changes
+
+1. Rulează:
+   - `npm start`
+2. Confirmă că proiectul mobil pornește fără erori de bundling.
+3. Rulează:
+   - `npm run web`
+4. Rulează:
+   - `npm run build:web`
+5. Confirmă că `dist/` este generat.
