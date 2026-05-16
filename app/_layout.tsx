@@ -1,5 +1,6 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { Platform } from "react-native";
 
 import { AppProvider } from "@/providers/AppProvider";
 import { colors } from "@/theme";
@@ -13,6 +14,8 @@ export default function RootLayout() {
 }
 
 function RootNavigator() {
+  const isWeb = Platform.OS === "web";
+
   return (
     <>
       <StatusBar style="light" />
@@ -28,19 +31,19 @@ function RootNavigator() {
         <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
         <Stack.Screen
           name="auth/login"
-          options={{ title: "Logare", headerBackTitle: "", headerBackButtonDisplayMode: "minimal" }}
+          options={{ title: "Logare", headerShown: !isWeb, headerBackTitle: "", headerBackButtonDisplayMode: "minimal" }}
         />
         <Stack.Screen
           name="auth/forgot-password"
-          options={{ title: "Resetare parolă", headerBackTitle: "", headerBackButtonDisplayMode: "minimal" }}
+          options={{ title: "Resetare parolă", headerShown: !isWeb, headerBackTitle: "", headerBackButtonDisplayMode: "minimal" }}
         />
         <Stack.Screen
           name="auth/register"
-          options={{ title: "Creează cont", headerBackTitle: "", headerBackButtonDisplayMode: "minimal" }}
+          options={{ title: "Creează cont", headerShown: !isWeb, headerBackTitle: "", headerBackButtonDisplayMode: "minimal" }}
         />
         <Stack.Screen
           name="auth/reset-password"
-          options={{ title: "Parolă nouă", headerBackTitle: "", headerBackButtonDisplayMode: "minimal" }}
+          options={{ title: "Parolă nouă", headerShown: !isWeb, headerBackTitle: "", headerBackButtonDisplayMode: "minimal" }}
         />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen

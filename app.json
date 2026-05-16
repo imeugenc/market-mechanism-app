@@ -7,7 +7,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "icon": "./ios/ExecutionEdge/Images.xcassets/AppIcon.appiconset/App-Icon-1024x1024@1x.png",
+    "icon": "./assets/branding/market-mechanism-mark.png",
     "plugins": [
       "expo-router",
       "expo-dev-client",
@@ -20,7 +20,8 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/branding/market-mechanism-mark.png"
+      "favicon": "./assets/branding/market-mechanism-mark.png",
+      "themeColor": "#000000"
     },
     "ios": {
       "supportsTablet": true,
