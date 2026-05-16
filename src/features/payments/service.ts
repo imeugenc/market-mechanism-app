@@ -17,6 +17,8 @@ type PaymentRequestRow = {
   status: "pending" | "verified" | "rejected";
   created_at: string;
   verified_at: string | null;
+  archived_at: string | null;
+  archived_by: string | null;
 };
 
 function mapPaymentRequest(row: PaymentRequestRow): PaymentRequest {
@@ -36,13 +38,15 @@ function mapPaymentRequest(row: PaymentRequestRow): PaymentRequest {
     status: row.status,
     createdAt: row.created_at,
     verifiedAt: row.verified_at ?? undefined,
+    archivedAt: row.archived_at ?? undefined,
+    archivedBy: row.archived_by ?? undefined,
   };
 }
 
 export async function fetchPaymentRequests() {
   const result = await supabase
     .from("payment_requests")
-    .select("id, user_id, type, plan_target, plan_label, duration_days, full_name, contact_email, payment_method, payment_proof, transaction_ref, notes, status, created_at, verified_at")
+    .select("id, user_id, type, plan_target, plan_label, duration_days, full_name, contact_email, payment_method, payment_proof, transaction_ref, notes, status, created_at, verified_at, archived_at, archived_by")
     .order("created_at", { ascending: false })
     .limit(200);
 
@@ -70,7 +74,7 @@ export async function createPaymentRequest(input: {
       type: "membership_upgrade",
       ...input,
     })
-    .select("id, user_id, type, plan_target, plan_label, duration_days, full_name, contact_email, payment_method, payment_proof, transaction_ref, notes, status, created_at, verified_at")
+    .select("id, user_id, type, plan_target, plan_label, duration_days, full_name, contact_email, payment_method, payment_proof, transaction_ref, notes, status, created_at, verified_at, archived_at, archived_by")
     .single();
 
   return {
@@ -82,17 +86,31 @@ export async function createPaymentRequest(input: {
 export async function updatePaymentRequest(
   paymentRequestId: string,
   input: {
-    status: "pending" | "verified" | "rejected";
+    status?: "pending" | "verified" | "rejected";
+    archived_at?: string | null;
+    archived_by?: string | null;
   },
 ) {
+  const payload: Record<string, string | null> = {};
+
+  if (input.status) {
+    payload.status = input.status;
+    payload.verified_at = input.status === "verified" ? new Date().toISOString() : null;
+  }
+
+  if ("archived_at" in input) {
+    payload.archived_at = input.archived_at ?? null;
+  }
+
+  if ("archived_by" in input) {
+    payload.archived_by = input.archived_by ?? null;
+  }
+
   const result = await supabase
     .from("payment_requests")
-    .update({
-      status: input.status,
-      verified_at: input.status === "verified" ? new Date().toISOString() : null,
-    })
+    .update(payload)
     .eq("id", paymentRequestId)
-    .select("id, user_id, type, plan_target, plan_label, duration_days, full_name, contact_email, payment_method, payment_proof, transaction_ref, notes, status, created_at, verified_at")
+    .select("id, user_id, type, plan_target, plan_label, duration_days, full_name, contact_email, payment_method, payment_proof, transaction_ref, notes, status, created_at, verified_at, archived_at, archived_by")
     .maybeSingle();
 
   return {

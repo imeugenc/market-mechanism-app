@@ -146,6 +146,8 @@ export interface PaymentRequest {
   status: "pending" | "verified" | "rejected";
   createdAt: string;
   verifiedAt?: string;
+  archivedAt?: string;
+  archivedBy?: string;
 }
 
 export interface PersonalRequest {
@@ -158,6 +160,8 @@ export interface PersonalRequest {
   status: RequestStatus;
   createdAt: string;
   updatedAt: string;
+  archivedAt?: string;
+  archivedBy?: string;
 }
 
 export interface InAppNotification {
@@ -177,6 +181,8 @@ export interface ContactMessage {
   message: string;
   status: "new" | "read" | "replied";
   createdAt: string;
+  archivedAt?: string;
+  archivedBy?: string;
   replies?: ContactMessageReply[];
 }
 

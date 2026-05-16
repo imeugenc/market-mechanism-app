@@ -19,6 +19,20 @@ function currentIsoValue() {
   return new Date().toISOString();
 }
 
+type ArchiveFilter = "active" | "archived" | "all";
+
+function matchesArchiveFilter(archivedAt: string | undefined, filter: ArchiveFilter) {
+  if (filter === "all") {
+    return true;
+  }
+
+  if (filter === "archived") {
+    return Boolean(archivedAt);
+  }
+
+  return !archivedAt;
+}
+
 export default function AdminScreen() {
   const {
     adminUsers,
@@ -42,7 +56,9 @@ export default function AdminScreen() {
     updateContactMessageStatus,
     replyToContactMessage,
     updatePaymentRequest,
+    archivePaymentRequest,
     updatePersonalRequest,
+    archivePersonalRequest,
     updateRequest,
     updateReview,
     deleteReview,
@@ -50,6 +66,7 @@ export default function AdminScreen() {
     refreshProtectedData,
     session,
     user,
+    archiveContactMessage,
   } = useAppState();
   const [market, setMarket] = useState<Market>("BTC");
   const [title, setTitle] = useState("Briefing sesiune principală");
@@ -102,7 +119,20 @@ export default function AdminScreen() {
     Record<string, { status: RequestStatus; paymentStatus: PaymentStatus; adminNotes: string; deliveryUrl: string }>
   >({});
   const [contactReplyDrafts, setContactReplyDrafts] = useState<Record<string, string>>({});
+  const [archiveFilters, setArchiveFilters] = useState<{
+    premiumRequests: ArchiveFilter;
+    personalDeliveries: ArchiveFilter;
+    contactMessages: ArchiveFilter;
+  }>({
+    premiumRequests: "active",
+    personalDeliveries: "active",
+    contactMessages: "active",
+  });
   const isOwnerAdmin = user?.isAdmin || isOwnerEmail(session?.user?.email);
+
+  const filteredPaymentRequests = paymentRequests.filter((item) => matchesArchiveFilter(item.archivedAt, archiveFilters.premiumRequests));
+  const filteredPersonalRequests = personalRequests.filter((item) => matchesArchiveFilter(item.archivedAt, archiveFilters.personalDeliveries));
+  const filteredContactMessages = contactMessages.filter((item) => matchesArchiveFilter(item.archivedAt, archiveFilters.contactMessages));
 
   const toggleSection = (key: keyof typeof openSections) => {
     setOpenSections((prev) => ({
@@ -138,6 +168,36 @@ export default function AdminScreen() {
       [contentId]: !prev[contentId],
     }));
   };
+
+  const setArchiveFilter = (key: keyof typeof archiveFilters, value: ArchiveFilter) => {
+    setArchiveFilters((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  const renderArchiveFilters = (key: keyof typeof archiveFilters) => (
+    <View style={styles.archiveFilterBlock}>
+      <Text style={styles.archiveFilterLabel}>Afișează arhivate</Text>
+      <View style={styles.archiveFilters}>
+        <PrimaryButton
+          label="Active"
+          variant={archiveFilters[key] === "active" ? "gold" : "ghost"}
+          onPress={() => setArchiveFilter(key, "active")}
+        />
+        <PrimaryButton
+          label="Arhivate"
+          variant={archiveFilters[key] === "archived" ? "gold" : "ghost"}
+          onPress={() => setArchiveFilter(key, "archived")}
+        />
+        <PrimaryButton
+          label="Toate"
+          variant={archiveFilters[key] === "all" ? "gold" : "ghost"}
+          onPress={() => setArchiveFilter(key, "all")}
+        />
+      </View>
+    </View>
+  );
 
   const handleOpenEmail = async (email: string, subject: string) => {
     const url = `mailto:${email}?subject=${encodeURIComponent(`Re: ${subject}`)}`;
@@ -774,7 +834,8 @@ export default function AdminScreen() {
       </Pressable>
       {openSections.premiumRequests ? (
       <View style={styles.list}>
-        {paymentRequests.map((item) => (
+        {renderArchiveFilters("premiumRequests")}
+        {filteredPaymentRequests.length ? filteredPaymentRequests.map((item) => (
           <View key={item.id} style={styles.item}>
             <Pressable style={styles.collapseHeader} onPress={() => togglePremiumRequest(item.id)}>
               <Text style={styles.collapseTitle}>
@@ -787,6 +848,7 @@ export default function AdminScreen() {
                 <Text style={styles.itemMeta}>
                   {item.status === "verified" ? "PREMIUM ACTIVAT" : item.status === "rejected" ? "RESPINSĂ" : "ÎN AȘTEPTAREA VALIDĂRII"} • {formatDate(item.createdAt)}
                 </Text>
+                {item.archivedAt ? <Text style={styles.archivedBadge}>Arhivat</Text> : null}
                 <Text style={styles.requestNotes}>
                   Plan: {item.planLabel ?? "Premium All Access"} • Durată: {item.durationDays ?? 30} zile
                 </Text>
@@ -841,10 +903,45 @@ export default function AdminScreen() {
                       : "Cererea este închisă: plata a fost respinsă."}
                   </Text>
                 )}
+                <View style={styles.actionButtons}>
+                  <PrimaryButton
+                    label={item.archivedAt ? "Scoate din arhivă" : "Archivează"}
+                    variant="ghost"
+                    onPress={() => {
+                      if (item.archivedAt) {
+                        void archivePaymentRequest(item.id, false).then((result) => {
+                          Alert.alert(result.success ? "Cerere actualizată" : "Actualizare eșuată", result.message);
+                        });
+                        return;
+                      }
+
+                      Alert.alert(
+                        "Arhivează cererea",
+                        "Sigur vrei să arhivezi această cerere?",
+                        [
+                          { text: "Nu", style: "cancel" },
+                          {
+                            text: "Da",
+                            style: "destructive",
+                            onPress: () =>
+                              void archivePaymentRequest(item.id, true).then((result) => {
+                                Alert.alert(result.success ? "Cerere arhivată" : "Actualizare eșuată", result.message);
+                              }),
+                          },
+                        ],
+                      );
+                    }}
+                  />
+                </View>
               </>
             ) : null}
           </View>
-        ))}
+        )) : (
+          <View style={styles.item}>
+            <Text style={styles.itemTitle}>Nu există cereri în acest filtru</Text>
+            <Text style={styles.requestNotes}>Schimbă filtrul pe Active, Arhivate sau Toate pentru a vedea alte înregistrări.</Text>
+          </View>
+        )}
       </View>
       ) : null}
 
@@ -879,12 +976,14 @@ export default function AdminScreen() {
         <Text style={styles.collapseMeta}>{openSections.personalDeliveries ? "Ascunde" : "Arată"}</Text>
       </Pressable>
       {openSections.personalDeliveries ? <View style={styles.list}>
-        {personalRequests.map((request) => (
+        {renderArchiveFilters("personalDeliveries")}
+        {filteredPersonalRequests.length ? filteredPersonalRequests.map((request) => (
           <View key={request.id} style={styles.item}>
             <Text style={styles.itemTitle}>{request.title}</Text>
             <Text style={styles.itemMeta}>
               {request.userEmail} • {request.status === "delivered" ? "Livrată" : request.status === "accepted" ? "Acceptată" : request.status === "cancelled" ? "Anulată" : "În așteptare"}
             </Text>
+            {request.archivedAt ? <Text style={styles.archivedBadge}>Arhivat</Text> : null}
             {request.notes ? <Text style={styles.requestNotes}>{request.notes}</Text> : null}
             <View style={styles.actionButtons}>
               {request.videoUrl ? (
@@ -898,9 +997,42 @@ export default function AdminScreen() {
                   setActiveComposer("private");
                 }}
               />
+              <PrimaryButton
+                label={request.archivedAt ? "Scoate din arhivă" : "Archivează"}
+                variant="ghost"
+                onPress={() => {
+                  if (request.archivedAt) {
+                    void archivePersonalRequest(request.id, false).then((result) => {
+                      Alert.alert(result.success ? "Cerere actualizată" : "Actualizare eșuată", result.message);
+                    });
+                    return;
+                  }
+
+                  Alert.alert(
+                    "Arhivează cererea",
+                    "Sigur vrei să arhivezi această cerere?",
+                    [
+                      { text: "Nu", style: "cancel" },
+                      {
+                        text: "Da",
+                        style: "destructive",
+                        onPress: () =>
+                          void archivePersonalRequest(request.id, true).then((result) => {
+                            Alert.alert(result.success ? "Cerere arhivată" : "Actualizare eșuată", result.message);
+                          }),
+                      },
+                    ],
+                  );
+                }}
+              />
             </View>
           </View>
-        ))}
+        )) : (
+          <View style={styles.item}>
+            <Text style={styles.itemTitle}>Nu există livrări în acest filtru</Text>
+            <Text style={styles.requestNotes}>Schimbă filtrul pe Active, Arhivate sau Toate pentru a gestiona istoria completă.</Text>
+          </View>
+        )}
       </View> : null}
 
       <SectionHeader eyebrow="Plan utilizator" title="Upgrade manual rapid" />
@@ -1074,10 +1206,12 @@ export default function AdminScreen() {
         <Text style={styles.collapseMeta}>{openSections.contactMessages ? "Ascunde" : "Arată"}</Text>
       </Pressable>
       {openSections.contactMessages ? <View style={styles.list}>
-        {contactMessages.length ? (
-          contactMessages.map((item) => (
+        {renderArchiveFilters("contactMessages")}
+        {filteredContactMessages.length ? (
+          filteredContactMessages.map((item) => (
             <View key={item.id} style={styles.item}>
               <Text style={styles.itemTitle}>{item.subject}</Text>
+              {item.archivedAt ? <Text style={styles.archivedBadge}>Arhivat</Text> : null}
               <View style={styles.identityCard}>
                 <Text style={styles.identityTitle}>Identitate expeditor</Text>
                 <Text style={styles.identityLine}>Nume: {item.fullName || "Necunoscut"}</Text>
@@ -1166,13 +1300,41 @@ export default function AdminScreen() {
                     })
                   }
                 />
+                <PrimaryButton
+                  label={item.archivedAt ? "Scoate din arhivă" : "Archivează"}
+                  variant="ghost"
+                  onPress={() => {
+                    if (item.archivedAt) {
+                      void archiveContactMessage(item.id, false).then((result) => {
+                        Alert.alert(result.success ? "Mesaj actualizat" : "Actualizare eșuată", result.message);
+                      });
+                      return;
+                    }
+
+                    Alert.alert(
+                      "Arhivează cererea",
+                      "Sigur vrei să arhivezi această cerere?",
+                      [
+                        { text: "Nu", style: "cancel" },
+                        {
+                          text: "Da",
+                          style: "destructive",
+                          onPress: () =>
+                            void archiveContactMessage(item.id, true).then((result) => {
+                              Alert.alert(result.success ? "Mesaj arhivat" : "Actualizare eșuată", result.message);
+                            }),
+                        },
+                      ],
+                    );
+                  }}
+                />
               </View>
             </View>
           ))
         ) : (
           <View style={styles.item}>
-            <Text style={styles.itemTitle}>Nu există încă mesaje de contact</Text>
-            <Text style={styles.requestNotes}>Mesajele trimise din pagina Contact apar aici automat.</Text>
+            <Text style={styles.itemTitle}>Nu există mesaje în acest filtru</Text>
+            <Text style={styles.requestNotes}>Mesajele trimise din pagina Contact apar aici automat și pot fi filtrate pe Active, Arhivate sau Toate.</Text>
           </View>
         )}
       </View> : null}
@@ -1323,6 +1485,19 @@ const styles = StyleSheet.create({
   list: {
     gap: spacing.sm,
   },
+  archiveFilterBlock: {
+    gap: spacing.xs,
+  },
+  archiveFilterLabel: {
+    color: colors.textMuted,
+    fontSize: typography.small,
+    fontWeight: "700",
+  },
+  archiveFilters: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
   actionButtons: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1344,6 +1519,18 @@ const styles = StyleSheet.create({
   itemMeta: {
     color: colors.gold,
     fontSize: typography.small,
+  },
+  archivedBadge: {
+    alignSelf: "flex-start",
+    color: colors.textStrong,
+    fontSize: typography.small,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    backgroundColor: "rgba(212, 175, 55, 0.22)",
+    borderRadius: radii.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   requestNotes: {
     color: colors.textMuted,

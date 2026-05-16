@@ -11,6 +11,7 @@ import {
   createContactMessage as persistContactMessage,
   createContactMessageReply as persistContactMessageReply,
   fetchContactMessages,
+  setContactMessageArchive as persistContactMessageArchive,
   updateContactMessageStatus as persistContactMessageStatus,
 } from "@/features/contact/service";
 import { createFavorite, deleteFavorite, fetchFavorites } from "@/features/favorites/service";
@@ -208,9 +209,12 @@ interface AppContextValue {
   deleteReview: (reviewId: string) => void;
   updateRequest: (requestId: string, input: RequestUpdateInput) => Promise<ActionResult>;
   updatePaymentRequest: (paymentRequestId: string, status: PaymentRequest["status"]) => Promise<ActionResult>;
+  archivePaymentRequest: (paymentRequestId: string, archived: boolean) => Promise<ActionResult>;
   updatePersonalRequest: (requestId: string, input: NewPersonalRequestInput) => void;
+  archivePersonalRequest: (requestId: string, archived: boolean) => Promise<ActionResult>;
   updateAdminUser: (input: { userId: string; role: "admin" | "user"; plan: UserPlan }) => void;
   updateContactMessageStatus: (contactMessageId: string, status: ContactMessage["status"]) => Promise<ActionResult>;
+  archiveContactMessage: (contactMessageId: string, archived: boolean) => Promise<ActionResult>;
   replyToContactMessage: (input: { contactMessageId: string; body: string }) => Promise<ActionResult>;
   markNotificationRead: (notificationId: string) => void;
   completeOnboarding: () => Promise<void>;
@@ -1501,6 +1505,46 @@ export function AppProvider({ children }: PropsWithChildren) {
           message,
         };
       },
+      archivePaymentRequest: async (paymentRequestId, archived) => {
+        const existing = paymentRequestState.find((item) => item.id === paymentRequestId);
+        const archiverId = session?.user?.id ?? user?.id;
+
+        if (!existing) {
+          return {
+            success: false,
+            message: "Cererea de plată nu a fost găsită.",
+          };
+        }
+
+        if (!archiverId) {
+          return {
+            success: false,
+            message: "Autentifică-te din nou înainte să arhivezi această cerere.",
+          };
+        }
+
+        const archivedAt = archived ? new Date().toISOString() : null;
+        const persisted = await persistPaymentRequestUpdate(paymentRequestId, {
+          archived_at: archivedAt,
+          archived_by: archived ? archiverId : null,
+        });
+
+        if (persisted.error || !persisted.data) {
+          return {
+            success: false,
+            message: `Nu am putut actualiza arhiva pentru această cerere. ${persisted.error?.message ?? "Încearcă din nou."}`,
+          };
+        }
+
+        setPaymentRequestState((prev) =>
+          prev.map((item) => (item.id === paymentRequestId ? persisted.data! : item)),
+        );
+
+        return {
+          success: true,
+          message: archived ? "Cererea a fost arhivată." : "Cererea a fost readusă în lista activă.",
+        };
+      },
       updatePersonalRequest: (requestId, input) => {
         setPersonalRequestState((prev) =>
           prev.map((item) =>
@@ -1527,6 +1571,52 @@ export function AppProvider({ children }: PropsWithChildren) {
           tier: input.tier,
           status: input.status,
         });
+      },
+      archivePersonalRequest: async (requestId, archived) => {
+        const existing = personalRequestState.find((item) => item.id === requestId);
+        const archiverId = session?.user?.id ?? user?.id;
+
+        if (!existing) {
+          return {
+            success: false,
+            message: "Cererea personală nu a fost găsită.",
+          };
+        }
+
+        if (!archiverId) {
+          return {
+            success: false,
+            message: "Autentifică-te din nou înainte să arhivezi această cerere.",
+          };
+        }
+
+        const archivedAt = archived ? new Date().toISOString() : null;
+        const persisted = await persistPersonalRequestUpdate(requestId, {
+          user_email: existing.userEmail,
+          title: existing.title,
+          video_url: existing.videoUrl,
+          notes: existing.notes,
+          tier: existing.tier,
+          status: existing.status,
+          archived_at: archivedAt,
+          archived_by: archived ? archiverId : null,
+        });
+
+        if (persisted.error || !persisted.data) {
+          return {
+            success: false,
+            message: `Nu am putut actualiza arhiva pentru această livrare. ${persisted.error?.message ?? "Încearcă din nou."}`,
+          };
+        }
+
+        setPersonalRequestState((prev) =>
+          prev.map((item) => (item.id === requestId ? persisted.data! : item)),
+        );
+
+        return {
+          success: true,
+          message: archived ? "Cererea a fost arhivată." : "Cererea a fost readusă în lista activă.",
+        };
       },
       updateAdminUser: ({ userId, role, plan }) => {
         void updateUserAccess({ userId, role, plan, durationDays: plan === "PRO" ? 30 : undefined });
@@ -1564,6 +1654,53 @@ export function AppProvider({ children }: PropsWithChildren) {
         return {
           success: true,
           message: "Statusul mesajului a fost actualizat.",
+        };
+      },
+      archiveContactMessage: async (contactMessageId, archived) => {
+        const existing = contactMessageState.find((item) => item.id === contactMessageId);
+        const archiverId = session?.user?.id ?? user?.id;
+
+        if (!existing) {
+          return {
+            success: false,
+            message: "Mesajul nu a fost găsit.",
+          };
+        }
+
+        if (!archiverId) {
+          return {
+            success: false,
+            message: "Autentifică-te din nou înainte să arhivezi acest mesaj.",
+          };
+        }
+
+        const persisted = await persistContactMessageArchive(contactMessageId, {
+          archived_at: archived ? new Date().toISOString() : null,
+          archived_by: archived ? archiverId : null,
+        });
+
+        if (persisted.error || !persisted.data) {
+          return {
+            success: false,
+            message: `Mesajul nu a putut fi arhivat. ${persisted.error?.message ?? "Încearcă din nou."}`,
+          };
+        }
+
+        setContactMessageState((prev) =>
+          prev.map((item) =>
+            item.id === contactMessageId
+              ? {
+                  ...item,
+                  ...persisted.data!,
+                  replies: existing.replies,
+                }
+              : item,
+          ),
+        );
+
+        return {
+          success: true,
+          message: archived ? "Mesajul a fost arhivat." : "Mesajul a fost readus în lista activă.",
         };
       },
       replyToContactMessage: async ({ contactMessageId, body }) => {

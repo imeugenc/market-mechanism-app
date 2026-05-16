@@ -10,6 +10,8 @@ type ContactMessageRow = {
   message: string;
   status: "new" | "read" | "replied";
   created_at: string;
+  archived_at: string | null;
+  archived_by: string | null;
 };
 
 type ContactReplyRow = {
@@ -31,6 +33,8 @@ function mapContactMessage(row: ContactMessageRow): ContactMessage {
     message: row.message,
     status: row.status,
     createdAt: row.created_at,
+    archivedAt: row.archived_at ?? undefined,
+    archivedBy: row.archived_by ?? undefined,
   };
 }
 
@@ -48,7 +52,7 @@ function mapContactReply(row: ContactReplyRow): ContactMessageReply {
 export async function fetchContactMessages() {
   const messagesResult = await supabase
     .from("contact_messages")
-    .select("id, user_id, full_name, email, subject, message, status, created_at")
+    .select("id, user_id, full_name, email, subject, message, status, created_at, archived_at, archived_by")
     .order("created_at", { ascending: false });
 
   if (messagesResult.error || !messagesResult.data) {
@@ -105,7 +109,7 @@ export async function createContactMessage(input: {
       subject: input.subject,
       message: input.message,
     })
-    .select("id, user_id, full_name, email, subject, message, status, created_at")
+    .select("id, user_id, full_name, email, subject, message, status, created_at, archived_at, archived_by")
     .single();
 
   return {
@@ -119,7 +123,30 @@ export async function updateContactMessageStatus(contactMessageId: string, statu
     .from("contact_messages")
     .update({ status })
     .eq("id", contactMessageId)
-    .select("id, user_id, full_name, email, subject, message, status, created_at")
+    .select("id, user_id, full_name, email, subject, message, status, created_at, archived_at, archived_by")
+    .single();
+
+  return {
+    ...result,
+    data: result.data ? mapContactMessage(result.data as ContactMessageRow) : null,
+  };
+}
+
+export async function setContactMessageArchive(
+  contactMessageId: string,
+  input: {
+    archived_at: string | null;
+    archived_by: string | null;
+  },
+) {
+  const result = await supabase
+    .from("contact_messages")
+    .update({
+      archived_at: input.archived_at,
+      archived_by: input.archived_by,
+    })
+    .eq("id", contactMessageId)
+    .select("id, user_id, full_name, email, subject, message, status, created_at, archived_at, archived_by")
     .single();
 
   return {

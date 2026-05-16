@@ -24,13 +24,11 @@ export function BrandLockup({ mode = "compact", align = "left" }: BrandLockupPro
           align === "center" && styles.lockupCenter,
         ]}
       >
-        <View style={[styles.markWrap, isHero ? styles.markWrapHero : styles.markWrapCompact]}>
-          <Image
-            source={BRAND_MARK}
-            style={[styles.mark, isHero ? styles.markHero : styles.markCompact]}
-            resizeMode="contain"
-          />
-        </View>
+        <Image
+          source={BRAND_MARK}
+          style={[styles.mark, isHero ? styles.markHero : styles.markCompact]}
+          resizeMode="contain"
+        />
         <View style={[styles.wordmarkWrap, align === "center" && styles.wordmarkWrapCenter]}>
           <Text style={[styles.wordmark, isHero ? styles.wordmarkHero : styles.wordmarkCompact, align === "center" && styles.wordmarkCenter]}>
             Market Mechanism
@@ -71,35 +69,17 @@ const styles = StyleSheet.create({
   lockupCenter: {
     alignItems: "center",
   },
-  markWrap: {
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.02)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.06)",
-  },
-  markWrapCompact: {
-    width: 64,
-    height: 64,
-    padding: 10,
-  },
-  markWrapHero: {
-    width: 96,
-    height: 96,
-    padding: 14,
-  },
   mark: {
-    width: "100%",
-    height: "100%",
+    width: 72,
+    height: 72,
   },
   markCompact: {
-    maxWidth: 38,
-    maxHeight: 38,
+    width: 72,
+    height: 72,
   },
   markHero: {
-    maxWidth: 62,
-    maxHeight: 62,
+    width: 132,
+    height: 132,
   },
   wordmarkWrap: {
     gap: 4,
@@ -114,14 +94,14 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   wordmarkCompact: {
-    fontSize: 20,
-    letterSpacing: 2.8,
+    fontSize: 19,
+    letterSpacing: 2.6,
     lineHeight: 24,
   },
   wordmarkHero: {
-    fontSize: 28,
-    letterSpacing: 4.2,
-    lineHeight: 32,
+    fontSize: 24,
+    letterSpacing: 5.2,
+    lineHeight: 30,
   },
   submark: {
     color: colors.textMuted,
