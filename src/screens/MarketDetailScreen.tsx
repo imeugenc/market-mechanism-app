@@ -13,15 +13,34 @@ import { canAccessPremiumContent, groupAnalysesByDate, groupReviewsByDate } from
 import { formatDailyLabel } from "@/lib/format";
 import { useAppState } from "@/providers/AppProvider";
 import { colors, radii, spacing, typography } from "@/theme";
+import { CORE_MARKETS } from "@/constants/markets";
 import { Market } from "@/types/domain";
 
 export function MarketDetailScreen() {
-  const { market } = useLocalSearchParams<{ market: Market }>();
+  const { market } = useLocalSearchParams<{ market?: string }>();
   const { analyses, favorites, membership, reviews, toggleFavorite, trackView } = useAppState();
+  const normalizedMarket = (market ?? "").trim().toUpperCase() as Market;
+  const isValidMarket = CORE_MARKETS.includes(normalizedMarket);
+
+  if (!isValidMarket) {
+    return (
+      <Screen>
+        <Stack.Screen
+          options={{
+            title: "Piață",
+            headerBackTitle: "",
+            headerBackButtonDisplayMode: "minimal",
+          }}
+        />
+        <SectionHeader title="Piața nu a fost găsită" caption="Verifică simbolul pieței și încearcă din nou." />
+      </Screen>
+    );
+  }
+
   const marketAnalyses = analyses
-    .filter((item) => item.market === market)
+    .filter((item) => item.market === normalizedMarket)
     .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
-  const marketReviews = reviews.filter((item) => item.market === market);
+  const marketReviews = reviews.filter((item) => item.market === normalizedMarket);
   const reviewGroups = groupReviewsByDate(marketReviews);
   const grouped = groupAnalysesByDate(marketAnalyses);
   const latest = marketAnalyses[0];
@@ -31,7 +50,7 @@ export function MarketDetailScreen() {
       <Screen>
         <Stack.Screen
           options={{
-            title: market ?? "Piață",
+            title: normalizedMarket,
             headerBackTitle: "",
             headerBackButtonDisplayMode: "minimal",
           }}
@@ -47,14 +66,14 @@ export function MarketDetailScreen() {
     <Screen>
       <Stack.Screen
         options={{
-          title: market ?? "Piață",
+          title: normalizedMarket,
           headerBackTitle: "",
           headerBackButtonDisplayMode: "minimal",
         }}
       />
       <PremiumCard>
         <PrimaryButton label="Înapoi la piețe" variant="ghost" onPress={() => router.push("/(tabs)/markets")} />
-        <Text style={styles.market}>{market}</Text>
+        <Text style={styles.market}>{normalizedMarket}</Text>
         <Text style={styles.title}>Sistem de briefing zilnic</Text>
         <Text style={styles.summary}>
           Briefingurile sunt grupate pe zile și ordonate cu cele mai noi primele. Fiecare zi conține video-ul principal publicat pentru piața selectată.
@@ -65,7 +84,7 @@ export function MarketDetailScreen() {
         </View>
         <View style={styles.metrics}>
           <MetricPill label="Plan" value={displayPlan(membership.currentPlan)} />
-          <MetricPill label="Piață" value={market ?? "-"} />
+          <MetricPill label="Piață" value={normalizedMarket} />
           <MetricPill label="Ultimul update" value={latest ? formatDailyLabel(latest.publishedAt) : "Indisponibil"} />
         </View>
         <View style={styles.actions}>
@@ -85,7 +104,7 @@ export function MarketDetailScreen() {
 
       <SectionHeader
         eyebrow="GRATUIT"
-        title={`After Action Review • ${market}`}
+        title={`After Action Review • ${normalizedMarket}`}
         caption="Primele elemente din pagină sunt review-urile publice după mișcare, disponibile pentru toți utilizatorii."
       />
       {reviewGroups.length ? (
@@ -123,7 +142,7 @@ export function MarketDetailScreen() {
 
       <SectionHeader
         eyebrow="Premium"
-        title={`Analiza de azi • ${market}`}
+        title={`Analiza de azi • ${normalizedMarket}`}
         caption="Aici apare briefingul video zilnic pentru piața selectată. Utilizatorii Free îl văd blocat, membrii Premium îl deschid complet."
       />
       {grouped.length ? (
