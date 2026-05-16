@@ -2,10 +2,12 @@
   "expo": {
     "name": "Execution Edge",
     "slug": "execution-edge",
+    "description": "Execution Edge web and mobile app for daily market analysis, personal requests, and premium trading content.",
     "scheme": "executionedge",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
+    "icon": "./ios/ExecutionEdge/Images.xcassets/AppIcon.appiconset/App-Icon-1024x1024@1x.png",
     "plugins": [
       "expo-router",
       "expo-dev-client",
@@ -15,6 +17,10 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./ios/ExecutionEdge/Images.xcassets/AppIcon.appiconset/App-Icon-1024x1024@1x.png"
     },
     "ios": {
       "supportsTablet": true,
