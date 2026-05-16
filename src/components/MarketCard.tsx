@@ -1,15 +1,18 @@
 import { router } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
 import { MARKET_DESCRIPTIONS } from "@/constants/markets";
 import { Market } from "@/types/domain";
 import { colors, radii, typography } from "@/theme";
 
 export function MarketCard({ market }: { market: Market }) {
+  const { width } = useWindowDimensions();
+  const isCompactWeb = Platform.OS === "web" && width < 820;
+
   return (
     <Pressable
       onPress={() => router.push(`/(tabs)/markets/${market}`)}
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.card, isCompactWeb && styles.cardCompactWeb, pressed && styles.pressed]}
     >
       <View style={styles.topRow}>
         <Text style={styles.market}>{market}</Text>
@@ -33,6 +36,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgGlass,
     padding: 20,
     gap: 14,
+  },
+  cardCompactWeb: {
+    padding: 16,
+    gap: 12,
   },
   pressed: {
     opacity: 0.94,

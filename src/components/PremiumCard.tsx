@@ -1,10 +1,13 @@
 import { PropsWithChildren } from "react";
 import { LinearGradient } from "expo-linear-gradient";
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View, useWindowDimensions } from "react-native";
 
 import { colors, radii, shadows } from "@/theme";
 
 export function PremiumCard({ children }: PropsWithChildren) {
+  const { width } = useWindowDimensions();
+  const isCompactWeb = Platform.OS === "web" && width < 820;
+
   return (
     <LinearGradient
       colors={["rgba(230, 200, 105, 0.2)", "rgba(22, 22, 22, 0.98)", "rgba(8, 8, 8, 0.99)"]}
@@ -12,7 +15,7 @@ export function PremiumCard({ children }: PropsWithChildren) {
       end={{ x: 1, y: 1 }}
       style={styles.outer}
     >
-      <View style={styles.inner}>{children}</View>
+      <View style={[styles.inner, isCompactWeb && styles.innerCompactWeb]}>{children}</View>
     </LinearGradient>
   );
 }
@@ -31,5 +34,9 @@ const styles = StyleSheet.create({
     gap: 16,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
+  },
+  innerCompactWeb: {
+    padding: 18,
+    gap: 14,
   },
 });

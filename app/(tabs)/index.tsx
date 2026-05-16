@@ -80,8 +80,7 @@ export default function HomeScreen() {
   return (
     <Screen>
       <PremiumCard>
-        <BrandLockup mode="hero" />
-        <Text style={styles.heroEyebrow}>Market Mechanism</Text>
+        <BrandLockup mode="hero" align="center" />
         <Text style={styles.heroTitle}>Sistem zilnic de briefing pentru traderi disciplinați.</Text>
         <Text style={styles.heroBody}>
           Gratuit vezi After Action Review. Premium deblochează briefingul video zilnic.
@@ -221,13 +220,6 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  heroEyebrow: {
-    color: colors.gold,
-    fontSize: typography.small,
-    letterSpacing: 1.6,
-    textTransform: "uppercase",
-    fontWeight: "800",
-  },
   heroTitle: {
     color: colors.textStrong,
     fontSize: 34,

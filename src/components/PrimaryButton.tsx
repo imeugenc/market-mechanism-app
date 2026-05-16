@@ -1,5 +1,5 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
 import { colors, radii, typography } from "@/theme";
 
@@ -12,6 +12,9 @@ export function PrimaryButton({
   onPress: () => void;
   variant?: "gold" | "ghost";
 }) {
+  const { width } = useWindowDimensions();
+  const isCompactWeb = Platform.OS === "web" && width < 820;
+
   return (
     <Pressable
       onPress={onPress}
@@ -25,12 +28,12 @@ export function PrimaryButton({
           colors={[colors.goldBright, colors.gold, "#A57A16"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={[styles.button, styles.gold]}
+          style={[styles.button, styles.gold, isCompactWeb && styles.buttonCompactWeb]}
         >
           <Text style={[styles.label, styles.labelDark]}>{label}</Text>
         </LinearGradient>
       ) : (
-        <View style={[styles.button, styles.ghost]}>
+        <View style={[styles.button, styles.ghost, isCompactWeb && styles.buttonCompactWeb]}>
           <Text style={[styles.label, styles.labelLight]}>{label}</Text>
         </View>
       )}
@@ -49,6 +52,10 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     borderWidth: 1,
     paddingHorizontal: 20,
+  },
+  buttonCompactWeb: {
+    minHeight: 48,
+    paddingHorizontal: 16,
   },
   gold: {
     borderColor: "rgba(255,255,255,0.18)",

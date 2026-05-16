@@ -12,7 +12,7 @@ import { colors, radii, spacing, typography } from "@/theme";
 
 const STEPS = [
   {
-    eyebrow: "Market Mechanism",
+    eyebrow: "Bine ai venit",
     title: "Analiză zilnică pentru traderi serioși",
     body: "BTC, ETH, NQ, ES – claritate, execuție, disciplină",
     button: "Începe",

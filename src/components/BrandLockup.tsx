@@ -2,14 +2,15 @@ import { Image, ImageSourcePropType, StyleSheet, Text, View } from "react-native
 
 import { colors, spacing, typography } from "@/theme";
 
-const BRAND_LOGO = require("../../assets/branding/market-mechanism-logo.jpg") as ImageSourcePropType;
+const BRAND_LOGO = require("../../assets/branding/market-mechanism-logo-full.png") as ImageSourcePropType;
 
 type BrandLockupProps = {
   mode?: "compact" | "hero";
   align?: "left" | "center";
+  showLabel?: boolean;
 };
 
-export function BrandLockup({ mode = "compact", align = "left" }: BrandLockupProps) {
+export function BrandLockup({ mode = "compact", align = "left", showLabel = false }: BrandLockupProps) {
   const isHero = mode === "hero";
 
   return (
@@ -19,7 +20,7 @@ export function BrandLockup({ mode = "compact", align = "left" }: BrandLockupPro
         style={[styles.logo, isHero ? styles.logoHero : styles.logoCompact]}
         resizeMode="contain"
       />
-      <Text style={[styles.kicker, align === "center" && styles.kickerCenter]}>Market Mechanism</Text>
+      {showLabel ? <Text style={[styles.kicker, align === "center" && styles.kickerCenter]}>Market Mechanism</Text> : null}
     </View>
   );
 }
@@ -33,17 +34,14 @@ const styles = StyleSheet.create({
   },
   logo: {
     width: "100%",
-    borderRadius: 14,
-    overflow: "hidden",
-    backgroundColor: "#050505",
   },
   logoCompact: {
-    height: 60,
-    maxWidth: 210,
+    height: 74,
+    maxWidth: 238,
   },
   logoHero: {
-    height: 78,
-    maxWidth: 260,
+    height: 112,
+    maxWidth: 320,
   },
   kicker: {
     color: colors.textMuted,

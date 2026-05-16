@@ -1,6 +1,6 @@
 import { PropsWithChildren } from "react";
 import { LinearGradient } from "expo-linear-gradient";
-import { Platform, ScrollView, StyleSheet, View } from "react-native";
+import { Platform, ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { colors, spacing } from "@/theme";
@@ -11,11 +11,15 @@ type ScreenProps = PropsWithChildren<{
 }>;
 
 export function Screen({ children, scroll = true, webMaxWidth = 1120 }: ScreenProps) {
+  const { width } = useWindowDimensions();
+  const isCompactWeb = Platform.OS === "web" && width < 820;
+
   const content = (
     <View
       style={[
         styles.content,
         Platform.OS === "web" && styles.contentWeb,
+        isCompactWeb && styles.contentCompactWeb,
         Platform.OS === "web" ? { maxWidth: webMaxWidth } : null,
       ]}
     >
@@ -55,5 +59,11 @@ const styles = StyleSheet.create({
     width: "100%",
     alignSelf: "center",
     paddingHorizontal: spacing.xl,
+  },
+  contentCompactWeb: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xxl + 64,
+    gap: spacing.lg,
   },
 });
