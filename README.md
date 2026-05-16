@@ -94,6 +94,21 @@ Outputul web este generat în:
 
 - `dist/`
 
+### Web Local QA Preview
+
+Pentru QA local stabil în browser, folosește preview-ul static al build-ului exportat:
+
+```bash
+npm run build:web
+npm run preview:web
+```
+
+Deschide apoi:
+
+- `http://localhost:4173`
+
+Dacă `expo start --web` este instabil local, acesta este fluxul recomandat de QA pentru proiect.
+
 ## Environment Variables
 
 Configurează în `.env` sau în platforma de deploy:
@@ -143,4 +158,6 @@ Environment variables în Vercel:
    - `npm run web`
 4. Rulează:
    - `npm run build:web`
-5. Confirmă că `dist/` este generat.
+5. Rulează:
+   - `npm run preview:web`
+6. Confirmă că `dist/` este generat și că `http://localhost:4173` răspunde.

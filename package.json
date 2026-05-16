@@ -7,6 +7,7 @@
     "start": "expo start",
     "web": "expo start --web",
     "build:web": "expo export --platform web",
+    "preview:web": "python3 -m http.server 4173 -d dist",
     "start:dev-client": "expo start --dev-client",
     "ios": "expo run:ios",
     "ios:device": "expo run:ios --device",
