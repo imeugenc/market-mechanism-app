@@ -26,17 +26,14 @@ export function BrandLockup({ mode = "compact", align = "left" }: BrandLockupPro
       >
         <Image
           source={BRAND_MARK}
-          style={[styles.mark, isHero ? styles.markHero : styles.markCompact]}
+          style={[styles.mark, isHero ? styles.markHero : styles.markCompact, align === "center" && styles.markCenter]}
           resizeMode="contain"
         />
-        <View style={[styles.wordmarkWrap, align === "center" && styles.wordmarkWrapCenter]}>
-          <Text style={[styles.wordmark, isHero ? styles.wordmarkHero : styles.wordmarkCompact, align === "center" && styles.wordmarkCenter]}>
-            Market Mechanism
-          </Text>
+        {isHero ? (
           <Text style={[styles.submark, align === "center" && styles.wordmarkCenter]}>
             Trading clarity. Structured execution.
           </Text>
-        </View>
+        ) : null}
       </View>
     </View>
   );
@@ -54,60 +51,40 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   lockupCompact: {
-    flexDirection: "row",
-    alignItems: "center",
-    maxWidth: 320,
+    alignItems: "flex-start",
+    maxWidth: 280,
   },
   lockupHero: {
     alignItems: "center",
     maxWidth: 420,
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   lockupCompactWeb: {
-    maxWidth: 360,
+    maxWidth: 320,
   },
   lockupCenter: {
     alignItems: "center",
   },
   mark: {
-    width: 72,
-    height: 72,
+    width: 96,
+    height: 96,
   },
   markCompact: {
-    width: 72,
-    height: 72,
+    width: 112,
+    height: 112,
   },
   markHero: {
-    width: 132,
-    height: 132,
-  },
-  wordmarkWrap: {
-    gap: 4,
-    flexShrink: 1,
-  },
-  wordmarkWrapCenter: {
-    alignItems: "center",
-  },
-  wordmark: {
-    color: colors.textStrong,
-    textTransform: "uppercase",
-    fontWeight: "800",
-  },
-  wordmarkCompact: {
-    fontSize: 19,
-    letterSpacing: 2.6,
-    lineHeight: 24,
-  },
-  wordmarkHero: {
-    fontSize: 24,
-    letterSpacing: 5.2,
-    lineHeight: 30,
+    width: 192,
+    height: 192,
   },
   submark: {
     color: colors.textMuted,
     fontSize: typography.small,
     letterSpacing: 0.4,
     fontWeight: "600",
+  },
+  markCenter: {
+    alignSelf: "center",
   },
   wordmarkCenter: {
     textAlign: "center",

@@ -2,6 +2,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Platform } from "react-native";
 
+import { WebInstallPrompt } from "@/components/WebInstallPrompt";
 import { AppProvider } from "@/providers/AppProvider";
 import { colors } from "@/theme";
 
@@ -67,6 +68,7 @@ function RootNavigator() {
           options={{ title: "After Action Review", headerBackTitle: "", headerBackButtonDisplayMode: "minimal" }}
         />
       </Stack>
+      <WebInstallPrompt />
     </>
   );
 }
