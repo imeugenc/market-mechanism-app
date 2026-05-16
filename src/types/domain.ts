@@ -191,7 +191,7 @@ export interface ContactMessageReply {
 
 export interface ContentComment {
   id: string;
-  contentType: "review" | "analysis" | "altcoin";
+  contentType: "review" | "analysis" | "altcoin" | "news";
   contentId: string;
   userId?: string;
   authorName: string;

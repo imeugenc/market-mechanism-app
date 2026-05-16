@@ -403,6 +403,7 @@ export function AppProvider({ children }: PropsWithChildren) {
       if (!altcoinsResult.error && altcoinsResult.data) {
         setAltcoinPostState(altcoinsResult.data);
       }
+
     })();
 
     void (async () => {

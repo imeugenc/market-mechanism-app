@@ -3,7 +3,7 @@ import { ContentComment } from "@/types/domain";
 
 type CommentRow = {
   id: string;
-  content_type: "review" | "analysis" | "altcoin";
+  content_type: "review" | "analysis" | "altcoin" | "news";
   content_id: string;
   user_id: string | null;
   author_name: string;

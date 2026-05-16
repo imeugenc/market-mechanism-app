@@ -1078,13 +1078,17 @@ export default function AdminScreen() {
           contactMessages.map((item) => (
             <View key={item.id} style={styles.item}>
               <Text style={styles.itemTitle}>{item.subject}</Text>
-              <Text style={styles.itemMeta}>
-                {item.fullName} • {item.email}
-              </Text>
+              <View style={styles.identityCard}>
+                <Text style={styles.identityTitle}>Identitate expeditor</Text>
+                <Text style={styles.identityLine}>Nume: {item.fullName || "Necunoscut"}</Text>
+                <Text style={styles.identityLine}>Email: {item.email || "Nespecificat"}</Text>
+                <Text style={styles.identityLine}>User ID: {item.userId || "Mesaj fără user asociat"}</Text>
+                <Text style={styles.identityLine}>Trimis la: {formatDate(item.createdAt)}</Text>
+                <Text style={styles.identityLine}>
+                  Status: {item.status === "new" ? "Nou" : item.status === "read" ? "Citit" : "Răspuns trimis"}
+                </Text>
+              </View>
               <Text style={styles.requestNotes}>{item.message}</Text>
-              <Text style={styles.requestNotes}>
-                Status conversație: {item.status === "new" ? "Nou" : item.status === "read" ? "Citit" : "Răspuns trimis"}
-              </Text>
               <View style={styles.replyThread}>
                 {item.replies?.length ? (
                   item.replies.map((reply) => (
@@ -1345,6 +1349,26 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: typography.body,
     lineHeight: 21,
+  },
+  identityCard: {
+    gap: 4,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.bgMuted,
+    padding: 12,
+  },
+  identityTitle: {
+    color: colors.gold,
+    fontSize: typography.small,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  identityLine: {
+    color: colors.textSoft,
+    fontSize: typography.body,
+    lineHeight: 20,
   },
   statusSelector: {
     flexDirection: "row",
