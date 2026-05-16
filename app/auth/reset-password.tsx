@@ -5,6 +5,7 @@ import * as Linking from "expo-linking";
 
 import { PremiumCard } from "@/components/PremiumCard";
 import { PrimaryButton } from "@/components/PrimaryButton";
+import { BrandLockup } from "@/components/BrandLockup";
 import { Screen } from "@/components/Screen";
 import { establishRecoverySession, parseAuthTokensFromUrl, updatePassword } from "@/features/auth/auth";
 import { useAppState } from "@/providers/AppProvider";
@@ -97,6 +98,7 @@ export default function ResetPasswordScreen() {
   return (
     <Screen>
       <PremiumCard>
+        <BrandLockup />
         <Text style={styles.eyebrow}>Resetare parolă</Text>
         <Text style={styles.title}>Alege parola nouă</Text>
         <Text style={styles.body}>Fluxul rulează nativ în aplicație. După salvare, sesiunea curentă rămâne activă.</Text>

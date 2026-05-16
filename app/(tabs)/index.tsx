@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
+import { BrandLockup } from "@/components/BrandLockup";
 import { ContentPreviewCard } from "@/components/ContentPreviewCard";
 import { MarketCard } from "@/components/MarketCard";
 import { MetricPill } from "@/components/MetricPill";
@@ -79,7 +80,8 @@ export default function HomeScreen() {
   return (
     <Screen>
       <PremiumCard>
-        <Text style={styles.heroEyebrow}>Execution Edge</Text>
+        <BrandLockup mode="hero" />
+        <Text style={styles.heroEyebrow}>Market Mechanism</Text>
         <Text style={styles.heroTitle}>Sistem zilnic de briefing pentru traderi disciplinați.</Text>
         <Text style={styles.heroBody}>
           Gratuit vezi After Action Review. Premium deblochează briefingul video zilnic.

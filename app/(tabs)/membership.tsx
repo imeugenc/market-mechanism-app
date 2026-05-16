@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
+import { BrandLockup } from "@/components/BrandLockup";
 import { PremiumCard } from "@/components/PremiumCard";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Screen } from "@/components/Screen";
@@ -123,6 +124,7 @@ export default function MembershipScreen() {
   return (
     <Screen>
       <PremiumCard>
+        <BrandLockup mode="hero" />
         <Text style={styles.eyebrow}>Premium</Text>
         <Text style={styles.title}>Deblochează analiza completă</Text>
         <Text style={styles.body}>

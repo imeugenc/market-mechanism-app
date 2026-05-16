@@ -165,7 +165,7 @@ function buildShell(title: string, recipient: string, preview: string, content: 
           <p style="margin:0 0 18px;color:#a8a18f;font-size:14px;line-height:1.7;">${escapeHtml(preview)}</p>
           ${content}
           <div style="margin-top:24px;padding-top:16px;border-top:1px solid #28231a;color:#8e8a7a;font-size:12px;line-height:1.6;">
-            Acest email a fost trimis automat din aplicația Execution Edge pentru notificări tranzacționale legate de contul tău.
+            Acest email a fost trimis automat din aplicația Market Mechanism pentru notificări tranzacționale legate de contul tău.
           </div>
         </div>
       </div>
@@ -291,7 +291,7 @@ function resolveText(row: QueueRow, recipient: string, subject: string) {
     .map(([key, value]) => `${key}: ${String(value)}`)
     .join("\n");
 
-  return [subject, "", row.body, metadata ? `\n${metadata}` : "", "", "Execution Edge / Market Mechanism"]
+  return [subject, "", row.body, metadata ? `\n${metadata}` : "", "", "Market Mechanism"]
     .join("\n")
     .trim();
 }

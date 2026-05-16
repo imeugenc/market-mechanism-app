@@ -8,8 +8,8 @@ import {
 
 export const demoUser: AppUser = {
   id: "user-1",
-  name: "Membru Execution Edge",
-  email: "member@executionedge.app",
+  name: "Membru Market Mechanism",
+  email: "member@marketmechanism.xyz",
   isAdmin: true,
   savedMarkets: ["BTC", "NQ"],
 };

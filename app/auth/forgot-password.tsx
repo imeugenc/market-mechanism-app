@@ -4,6 +4,7 @@ import { StyleSheet, Text, TextInput } from "react-native";
 
 import { PremiumCard } from "@/components/PremiumCard";
 import { PrimaryButton } from "@/components/PrimaryButton";
+import { BrandLockup } from "@/components/BrandLockup";
 import { Screen } from "@/components/Screen";
 import { sendPasswordResetEmail } from "@/features/auth/auth";
 import { getSupabaseConfigError } from "@/lib/supabase";
@@ -47,6 +48,7 @@ export default function ForgotPasswordScreen() {
   return (
     <Screen>
       <PremiumCard>
+        <BrandLockup />
         <Text style={styles.eyebrow}>Recuperare cont</Text>
         <Text style={styles.title}>Resetează parola</Text>
         <Text style={styles.body}>Primești pe email un link securizat care deschide direct fluxul nativ de setare a parolei noi.</Text>

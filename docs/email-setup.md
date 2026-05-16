@@ -38,7 +38,7 @@ supabase secrets set \
   RESEND_API_KEY=re_xxxxxxxxx \
   EMAIL_QUEUE_CRON_SECRET=replace-with-a-long-random-secret \
   EMAIL_FROM=noreply@marketmechanism.xyz \
-  EMAIL_FROM_NAME="Execution Edge" \
+  EMAIL_FROM_NAME="Market Mechanism" \
   EMAIL_REPLY_TO=hello@marketmechanism.xyz \
   OWNER_EMAIL=hello@marketmechanism.xyz
 ```
@@ -130,7 +130,7 @@ In Supabase Dashboard:
    - Port: `465`
    - Username: `resend`
    - Password: your Resend API key
-   - Sender name: `Execution Edge`
+   - Sender name: `Market Mechanism`
    - Sender email: `noreply@marketmechanism.xyz`
 4. Save
 5. Send a test email from the Supabase dashboard

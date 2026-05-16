@@ -1,6 +1,6 @@
-# Execution Edge
+# Market Mechanism
 
-Execution Edge este o aplicație premium construită cu Expo Router + React Native + TypeScript, cu backend Supabase, pentru analiză zilnică pe BTC, ETH, NQ și ES. Proiectul păstrează paritatea mobile și este pregătit incremental pentru lansare web-first.
+Market Mechanism este o aplicație premium construită cu Expo Router + React Native + TypeScript, cu backend Supabase, pentru analiză zilnică pe BTC, ETH, NQ și ES. Proiectul păstrează paritatea mobile și este pregătit incremental pentru lansare web-first.
 
 ## Short Build Plan
 

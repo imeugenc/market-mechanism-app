@@ -855,8 +855,9 @@ export function AppProvider({ children }: PropsWithChildren) {
             : { success: false, error: null };
         const requestUserId = ensureProfileResult.success ? activeUserId : hydratedProfile?.user.id ?? activeUserId ?? undefined;
         const contactEmail = (
-          requesterEmail ??
-          fallbackEmail
+          requesterEmail?.trim() ||
+          fallbackEmail?.trim() ||
+          ""
         ).trim();
 
         if (!requestUserId) {
@@ -899,10 +900,17 @@ export function AppProvider({ children }: PropsWithChildren) {
           "Solicitare primită",
           "Cererea a fost înregistrată. Plata se confirmă manual, iar livrarea începe după confirmare.",
         );
+        const customerEmail = (
+          request.requesterEmail?.trim() ||
+          contactEmail ||
+          fallbackEmail?.trim() ||
+          ""
+        ).trim();
+
         void queueRequestEmailNotification({
           event: "cerere_primită",
           userId: request.userId,
-          email: contactEmail,
+          email: customerEmail,
           requestId: request.id,
           subject: "Cererea ta a fost primită",
           body: "Solicitarea a fost înregistrată și așteaptă confirmarea.",

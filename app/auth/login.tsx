@@ -4,6 +4,7 @@ import { StyleSheet, Text, TextInput, View } from "react-native";
 
 import { PremiumCard } from "@/components/PremiumCard";
 import { PrimaryButton } from "@/components/PrimaryButton";
+import { BrandLockup } from "@/components/BrandLockup";
 import { Screen } from "@/components/Screen";
 import { getSupabaseConfigError } from "@/lib/supabase";
 import { useAppState } from "@/providers/AppProvider";
@@ -57,6 +58,7 @@ export default function LoginScreen() {
   return (
     <Screen>
       <PremiumCard>
+        <BrandLockup />
         <Text style={styles.eyebrow}>Acces cont</Text>
         <Text style={styles.title}>Logare</Text>
         <Text style={styles.body}>Intră în contul tău pentru a accesa planul, istoricul și conținutul Premium.</Text>

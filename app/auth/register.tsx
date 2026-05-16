@@ -4,6 +4,7 @@ import { StyleSheet, Text, TextInput } from "react-native";
 
 import { PremiumCard } from "@/components/PremiumCard";
 import { PrimaryButton } from "@/components/PrimaryButton";
+import { BrandLockup } from "@/components/BrandLockup";
 import { Screen } from "@/components/Screen";
 import { getSupabaseConfigError } from "@/lib/supabase";
 import { useAppState } from "@/providers/AppProvider";
@@ -63,6 +64,7 @@ export default function RegisterScreen() {
   return (
     <Screen>
       <PremiumCard>
+        <BrandLockup />
         <Text style={styles.eyebrow}>Acces nou</Text>
         <Text style={styles.title}>Creează cont</Text>
         <Text style={styles.body}>

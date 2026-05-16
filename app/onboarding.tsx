@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { StyleSheet, Text, View } from "react-native";
 
+import { BrandLockup } from "@/components/BrandLockup";
 import { PremiumCard } from "@/components/PremiumCard";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Screen } from "@/components/Screen";
@@ -11,7 +12,7 @@ import { colors, radii, spacing, typography } from "@/theme";
 
 const STEPS = [
   {
-    eyebrow: "Execution Edge",
+    eyebrow: "Market Mechanism",
     title: "Analiză zilnică pentru traderi serioși",
     body: "BTC, ETH, NQ, ES – claritate, execuție, disciplină",
     button: "Începe",
@@ -61,6 +62,7 @@ export default function OnboardingScreen() {
     <Screen>
       <View style={styles.shell}>
         <PremiumCard>
+          <BrandLockup mode="hero" align="center" />
           <View style={styles.iconWrap}>
             <MaterialCommunityIcons name={step.icon} size={26} color={colors.gold} />
           </View>

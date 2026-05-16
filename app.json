@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Execution Edge",
+    "name": "Market Mechanism",
     "slug": "execution-edge",
-    "description": "Execution Edge web and mobile app for daily market analysis, personal requests, and premium trading content.",
+    "description": "Market Mechanism web and mobile app for daily market analysis, personal requests, and premium trading content.",
     "scheme": "executionedge",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -20,7 +20,7 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./ios/ExecutionEdge/Images.xcassets/AppIcon.appiconset/App-Icon-1024x1024@1x.png"
+      "favicon": "./assets/branding/market-mechanism-mark.png"
     },
     "ios": {
       "supportsTablet": true,
