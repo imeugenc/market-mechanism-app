@@ -10,3 +10,4 @@ dist/
 .env
 supabase/.temp/
 .vercel
+backups/*.sql

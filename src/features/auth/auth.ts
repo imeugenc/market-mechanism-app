@@ -90,16 +90,11 @@ export async function signInWithEmailPassword(email: string, password: string) {
 export async function signUpWithEmailPassword(
   email: string,
   password: string,
-  metadata?: {
-    role?: "user" | "admin";
-    plan?: "free" | "premium";
-  },
 ) {
   return supabase.auth.signUp({
     email,
     password,
     options: {
-      data: metadata,
       emailRedirectTo: createAuthRedirectUrl(),
     },
   });

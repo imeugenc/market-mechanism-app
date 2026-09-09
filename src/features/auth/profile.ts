@@ -60,68 +60,12 @@ export async function fetchProfileAndMembership(userId: string) {
   return { user, stats };
 }
 
-export async function ensureProfileAndMembership(userId: string, email: string) {
-  const role = "user";
-  const plan = "FREE";
-
-  await supabase.from("profiles").upsert(
-    {
-      id: userId,
-      email,
-      display_name: email.split("@")[0] || "Utilizator",
-      is_admin: false,
-      role,
-      subscription_tier: "free",
-      saved_markets: [],
-      bio: null,
-      trading_experience: null,
-      traded_markets: null,
-      trading_style: null,
-      preferred_sessions: null,
-      focused_setups: null,
-      current_goal: null,
-      member_profile_visibility: "private",
-    },
-    { onConflict: "id", ignoreDuplicates: true },
-  );
-
-  await supabase.from("memberships").upsert(
-    {
-      user_id: userId,
-      current_plan: plan,
-      current_rank: "Recruit",
-      plan_label: "Premium All Access",
-      started_at: new Date().toISOString(),
-      expires_at: null,
-      renewal_mode: "manual",
-      login_streak: 0,
-      total_views: 0,
-      premium_views: 0,
-      total_requests: 0,
-      engagement_actions: 0,
-      score: 0,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id", ignoreDuplicates: true },
-  );
-}
-
-export async function ensureProfileAndMembershipRecord(userId: string, email?: string) {
-  const normalizedEmail = email?.trim().toLowerCase() || null;
+export async function ensureProfileAndMembershipRecord(userId: string, _email?: string) {
   const rpcResult = await supabase.rpc("ensure_profile_membership", {
-    target_user_id: userId,
-    target_email: normalizedEmail,
+    p_target_user_id: userId,
   });
 
   if (!rpcResult.error) {
-    return {
-      success: true,
-      error: null,
-    };
-  }
-
-  if (normalizedEmail) {
-    await ensureProfileAndMembership(userId, normalizedEmail);
     return {
       success: true,
       error: null,

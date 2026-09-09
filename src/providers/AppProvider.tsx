@@ -33,7 +33,6 @@ import {
 import {
   activateUserPlanByIdentifier,
   ensureProfileAndMembershipRecord,
-  ensureProfileAndMembership,
   findAdminUserByIdentifier,
   fetchAdminUsers,
   fetchProfileAndMembership,
@@ -305,7 +304,7 @@ export function AppProvider({ children }: PropsWithChildren) {
 
     let loaded = await fetchProfileAndMembership(sessionUser.id);
     if (!loaded && sessionUser.email) {
-      await ensureProfileAndMembership(sessionUser.id, sessionUser.email);
+      await ensureProfileAndMembershipRecord(sessionUser.id);
       loaded = await fetchProfileAndMembership(sessionUser.id);
     }
 
@@ -492,7 +491,7 @@ export function AppProvider({ children }: PropsWithChildren) {
     let loaded = await fetchProfileAndMembership(activeSessionUser.id);
 
     if (!loaded) {
-      await ensureProfileAndMembership(activeSessionUser.id, activeSessionUser.email);
+      await ensureProfileAndMembershipRecord(activeSessionUser.id);
       loaded = await fetchProfileAndMembership(activeSessionUser.id);
     }
 
@@ -646,10 +645,7 @@ export function AppProvider({ children }: PropsWithChildren) {
           return { success: false, isAdmin: false, message };
         }
 
-        const { data, error } = await signUpWithEmailPassword(email, password, {
-          role: "user",
-          plan: "free",
-        });
+        const { data, error } = await signUpWithEmailPassword(email, password);
 
         if (error) {
           const message = formatAuthErrorMessage(error.message);
