@@ -1,12 +1,12 @@
 import { PropsWithChildren } from "react";
 import { LinearGradient } from "expo-linear-gradient";
-import { Platform, StyleSheet, View, useWindowDimensions } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import { colors, radii, shadows } from "@/theme";
+import { useResponsiveWeb } from "@/hooks/useResponsiveWeb";
 
 export function PremiumCard({ children }: PropsWithChildren) {
-  const { width } = useWindowDimensions();
-  const isCompactWeb = Platform.OS === "web" && width < 820;
+  const { isCompactWeb } = useResponsiveWeb();
 
   return (
     <LinearGradient

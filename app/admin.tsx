@@ -9,6 +9,7 @@ import { PremiumCard } from "@/components/PremiumCard";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Screen } from "@/components/Screen";
 import { SectionHeader } from "@/components/SectionHeader";
+import { SegmentedControl } from "@/components/SegmentedControl";
 import { normalizeIsoDate } from "@/lib/dates";
 import { formatDate } from "@/lib/format";
 import { sanitizeRemoteImageUrl } from "@/lib/media";
@@ -21,6 +22,7 @@ function currentIsoValue() {
 }
 
 type ArchiveFilter = "active" | "archived" | "all";
+type AdminArea = "today" | "content" | "operations";
 
 function matchesArchiveFilter(archivedAt: string | undefined, filter: ArchiveFilter) {
   if (filter === "all") {
@@ -116,6 +118,7 @@ export default function AdminScreen() {
   const [premiumUserId, setPremiumUserId] = useState("");
   const [premiumDurationDays, setPremiumDurationDays] = useState<30 | 90>(30);
   const [activeComposer, setActiveComposer] = useState<"aar" | "bias" | "briefing" | "altcoins" | "private" | null>(null);
+  const [adminArea, setAdminArea] = useState<AdminArea>("today");
   const [expandedPremiumRequests, setExpandedPremiumRequests] = useState<Record<string, boolean>>({});
   const [expandedAnalysisRequests, setExpandedAnalysisRequests] = useState<Record<string, boolean>>({});
   const [expandedMembers, setExpandedMembers] = useState<Record<string, boolean>>({});
@@ -144,6 +147,7 @@ export default function AdminScreen() {
     contactMessages: "active",
   });
   const isOwnerAdmin = user?.isAdmin || isOwnerEmail(session?.user?.email);
+  const pendingOperations = paymentRequests.filter((item) => item.status === "pending" && !item.archivedAt).length + requests.filter((item) => item.status !== "delivered" && item.status !== "cancelled").length + contactMessages.filter((item) => item.status === "new" && !item.archivedAt).length;
 
   const filteredPaymentRequests = paymentRequests.filter((item) => matchesArchiveFilter(item.archivedAt, archiveFilters.premiumRequests));
   const filteredPersonalRequests = personalRequests.filter((item) => matchesArchiveFilter(item.archivedAt, archiveFilters.personalDeliveries));
@@ -462,34 +466,48 @@ export default function AdminScreen() {
         <Text style={styles.body}>Acces curent: {session?.user?.email ?? user?.email ?? "necunoscut"}</Text>
       </PremiumCard>
 
-      <SectionHeader eyebrow="Quick Actions" title="Publicare și livrare rapidă" />
+      <SegmentedControl
+        value={adminArea}
+        options={[{ value: "today", label: "Astăzi" }, { value: "content", label: "Conținut" }, { value: "operations", label: `Operațiuni${pendingOperations ? ` · ${pendingOperations}` : ""}` }]}
+        onChange={(area) => { setAdminArea(area); if (area !== "content") setActiveComposer(null); }}
+      />
+
+      {adminArea === "today" ? (
+        <View style={styles.todayGrid}>
+          <View style={styles.todayCard}><Text style={styles.todayLabel}>CONȚINUT</Text><Text style={styles.todayValue}>{dailyBiases.length + analyses.length + reviews.length + altcoinPosts.length}</Text><Text style={styles.todayMeta}>elemente publicate</Text></View>
+          <View style={styles.todayCard}><Text style={styles.todayLabel}>DE REZOLVAT</Text><Text style={styles.todayValue}>{pendingOperations}</Text><Text style={styles.todayMeta}>cereri, plăți și mesaje</Text></View>
+          <View style={styles.todayCard}><Text style={styles.todayLabel}>MEMBRI PREMIUM</Text><Text style={styles.todayValue}>{adminUsers.filter((item) => item.plan === "PRO").length}</Text><Text style={styles.todayMeta}>acces activ în sistem</Text></View>
+        </View>
+      ) : null}
+
+      {adminArea !== "operations" ? <><SectionHeader eyebrow="Acțiuni rapide" title={adminArea === "today" ? "Ce publici sau livrezi acum?" : "Publicare și livrare"} />
       <View style={styles.quickActions}>
         <PrimaryButton
           label="Publică AAR"
           variant={activeComposer === "aar" ? "gold" : "ghost"}
-          onPress={() => setActiveComposer((prev) => (prev === "aar" ? null : "aar"))}
+          onPress={() => { setAdminArea("content"); setActiveComposer((prev) => (prev === "aar" ? null : "aar")); }}
         />
         <PrimaryButton
           label="Daily Bias"
           variant={activeComposer === "bias" ? "gold" : "ghost"}
-          onPress={() => setActiveComposer((prev) => (prev === "bias" ? null : "bias"))}
+          onPress={() => { setAdminArea("content"); setActiveComposer((prev) => (prev === "bias" ? null : "bias")); }}
         />
         <PrimaryButton
           label="Publică Briefing"
           variant={activeComposer === "briefing" ? "gold" : "ghost"}
-          onPress={() => setActiveComposer((prev) => (prev === "briefing" ? null : "briefing"))}
+          onPress={() => { setAdminArea("content"); setActiveComposer((prev) => (prev === "briefing" ? null : "briefing")); }}
         />
         <PrimaryButton
           label="Publică Altcoins"
           variant={activeComposer === "altcoins" ? "gold" : "ghost"}
-          onPress={() => setActiveComposer((prev) => (prev === "altcoins" ? null : "altcoins"))}
+          onPress={() => { setAdminArea("content"); setActiveComposer((prev) => (prev === "altcoins" ? null : "altcoins")); }}
         />
         <PrimaryButton
           label="Creează analiză privată"
           variant={activeComposer === "private" ? "gold" : "ghost"}
-          onPress={() => setActiveComposer((prev) => (prev === "private" ? null : "private"))}
+          onPress={() => { setAdminArea("content"); setActiveComposer((prev) => (prev === "private" ? null : "private")); }}
         />
-      </View>
+      </View></> : null}
 
       {activeComposer === "bias" ? (
         <>
@@ -969,7 +987,7 @@ export default function AdminScreen() {
       </>
       ) : null}
 
-      <CollapsibleSection
+      {adminArea === "content" ? <CollapsibleSection
         title="Conținut publicat"
         eyebrow="Conținut"
         caption="Briefinguri, After Action Review și Altcoins sunt grupate clar și nu mai ocupă permanent tot ecranul."
@@ -981,7 +999,7 @@ export default function AdminScreen() {
           {dailyBiases.map((bias) => (
             <View key={bias.id} style={styles.item}>
               <Pressable style={styles.collapseHeader} onPress={() => toggleContentItem(`bias-${bias.id}`)}>
-                <Text style={styles.collapseTitle}>{bias.market} • {bias.forecastedBias}</Text>
+                <Text style={styles.collapseTitle}>{bias.market} · {bias.forecastedBias} · {formatDate(bias.publishedAt)} · {bias.outcome}</Text>
                 <Text style={styles.collapseMeta}>{expandedContent[`bias-${bias.id}`] ? "Ascunde" : "Arată"}</Text>
               </Pressable>
               {expandedContent[`bias-${bias.id}`] ? (
@@ -1071,9 +1089,9 @@ export default function AdminScreen() {
             </View>
           ))}
         </View>
-      </CollapsibleSection>
+      </CollapsibleSection> : null}
 
-      <SectionHeader eyebrow="Plăți manuale" title="Confirmări pentru upgrade Premium" />
+      {adminArea === "operations" ? <><SectionHeader eyebrow="Plăți manuale" title="Confirmări pentru upgrade Premium" />
       <Pressable style={styles.collapseHeader} onPress={() => toggleSection("premiumRequests")}>
         <Text style={styles.collapseTitle}>Cereri Premium</Text>
         <Text style={styles.collapseMeta}>{openSections.premiumRequests ? "Ascunde" : "Arată"}</Text>
@@ -1332,7 +1350,7 @@ export default function AdminScreen() {
           return (
             <View key={request.id} style={styles.item}>
               <Pressable style={styles.collapseHeader} onPress={() => toggleAnalysisRequest(request.id)}>
-                <Text style={styles.collapseTitle}>{request.ticker} • ${request.tier}</Text>
+                <Text style={styles.collapseTitle}>{request.ticker} · ${request.tier} · {request.status === "pending" ? "În așteptare" : request.status === "accepted" ? "În lucru" : request.status === "delivered" ? "Livrată" : "Anulată"}</Text>
                 <Text style={styles.collapseMeta}>{expandedAnalysisRequests[request.id] ? "Ascunde" : "Arată"}</Text>
               </Pressable>
               {expandedAnalysisRequests[request.id] ? (
@@ -1444,7 +1462,7 @@ export default function AdminScreen() {
             </View>
           );
         })}
-      </View> : null}
+      </View> : null}</> : null}
 
       <SectionHeader eyebrow="Contact" title="Mesaje primite din aplicație" />
       <Pressable style={styles.collapseHeader} onPress={() => toggleSection("contactMessages")}>
@@ -1660,6 +1678,24 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: spacing.sm,
   },
+  todayGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  todayCard: {
+    backgroundColor: colors.bgGlass,
+    borderColor: colors.borderSubtle,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    flexBasis: 220,
+    flexGrow: 1,
+    gap: 4,
+    padding: 18,
+  },
+  todayLabel: { color: colors.textSoft, fontSize: typography.caption, fontWeight: "800", letterSpacing: 1.1 },
+  todayValue: { color: colors.textStrong, fontSize: 30, fontWeight: "800" },
+  todayMeta: { color: colors.textMuted, fontSize: typography.small },
   collapseHeader: {
     flexDirection: "row",
     alignItems: "center",

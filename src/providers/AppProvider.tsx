@@ -167,10 +167,20 @@ type ActionResult = {
   message: string;
 };
 
+export type DataLoadState = "loading" | "ready" | "partial" | "error";
+
+function resolveDataLoadState(results: Array<{ error: unknown }>): DataLoadState {
+  const errorCount = results.filter((result) => Boolean(result.error)).length;
+  if (!errorCount) return "ready";
+  return errorCount === results.length ? "error" : "partial";
+}
+
 interface AppContextValue {
   session: Session | null;
   user: AppUser | null;
   authReady: boolean;
+  publicContentState: DataLoadState;
+  protectedDataState: DataLoadState;
   isAuthenticated: boolean;
   membership: MembershipStats;
   analyses: DailyAnalysis[];
@@ -256,7 +266,9 @@ function getSessionKey(session: Session | null) {
 export function AppProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<AppUser | null>(null);
-  const [authReady, setAuthReady] = useState(IS_STATIC_WEB_RENDER);
+  const [authReady, setAuthReady] = useState(false);
+  const [publicContentState, setPublicContentState] = useState<DataLoadState>("loading");
+  const [protectedDataState, setProtectedDataState] = useState<DataLoadState>("loading");
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [authMessage, setAuthMessage] = useState(
@@ -280,8 +292,8 @@ export function AppProvider({ children }: PropsWithChildren) {
   const [favoriteState, setFavoriteState] = useState<FavoriteItem[]>([]);
   const [contactMessageState, setContactMessageState] = useState<ContactMessage[]>([]);
   const [notifications, setNotifications] = useState<InAppNotification[]>([]);
-  const [onboardingReady, setOnboardingReady] = useState(IS_STATIC_WEB_RENDER);
-  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(IS_STATIC_WEB_RENDER);
+  const [onboardingReady, setOnboardingReady] = useState(false);
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
   const lastHydratedSessionKeyRef = useRef<string>("guest");
 
   const resetAuthState = () => {
@@ -308,6 +320,7 @@ export function AppProvider({ children }: PropsWithChildren) {
     const sessionUser = nextSession?.user;
     if (!sessionUser) {
       resetAuthState();
+      setProtectedDataState("ready");
       return {
         user: null as AppUser | null,
         isAdmin: false,
@@ -364,6 +377,7 @@ export function AppProvider({ children }: PropsWithChildren) {
     setCurrentPlan(loaded.stats.currentPlan);
     setStats(loaded.stats);
 
+    setProtectedDataState("loading");
     const [requestsResult, paymentRequestsResult, personalRequestsResult, adminUsersResult, favoritesResult, contactMessagesResult] = await Promise.all([
       fetchAnalysisRequests(),
       fetchPaymentRequests(),
@@ -382,6 +396,8 @@ export function AppProvider({ children }: PropsWithChildren) {
     setAdminUserState(!adminUsersResult.error && adminUsersResult.data ? adminUsersResult.data : []);
     setFavoriteState(!favoritesResult.error && favoritesResult.data ? favoritesResult.data : []);
     setContactMessageState(!contactMessagesResult.error && contactMessagesResult.data ? contactMessagesResult.data : []);
+    const protectedResults = [requestsResult, paymentRequestsResult, personalRequestsResult, favoritesResult];
+    setProtectedDataState(resolveDataLoadState(protectedResults));
 
     return {
       user: loaded.user,
@@ -401,6 +417,7 @@ export function AppProvider({ children }: PropsWithChildren) {
     })();
 
     void (async () => {
+      setPublicContentState("loading");
       const [analysesResult, biasesResult, reviewsResult, altcoinsResult] = await Promise.all([
         fetchDailyAnalyses(),
         fetchDailyBiases(),
@@ -423,7 +440,7 @@ export function AppProvider({ children }: PropsWithChildren) {
       if (!altcoinsResult.error && altcoinsResult.data) {
         setAltcoinPostState(altcoinsResult.data);
       }
-
+      setPublicContentState(resolveDataLoadState([analysesResult, biasesResult, reviewsResult, altcoinsResult]));
     })();
 
     void (async () => {
@@ -548,6 +565,7 @@ export function AppProvider({ children }: PropsWithChildren) {
       return;
     }
 
+    setProtectedDataState("loading");
     const hydratedProfile = await ensureActiveProfile();
     const isAdmin = hydratedProfile?.user.isAdmin ?? isOwnerEmail(activeSessionUser.email);
 
@@ -569,6 +587,8 @@ export function AppProvider({ children }: PropsWithChildren) {
     setAdminUserState(!adminUsersResult.error && adminUsersResult.data ? adminUsersResult.data : []);
     setFavoriteState(!favoritesResult.error && favoritesResult.data ? favoritesResult.data : []);
     setContactMessageState(!contactMessagesResult.error && contactMessagesResult.data ? contactMessagesResult.data : []);
+    const protectedResults = [requestsResult, paymentRequestsResult, personalRequestsResult, favoritesResult];
+    setProtectedDataState(resolveDataLoadState(protectedResults));
   };
 
   useEffect(() => {
@@ -592,6 +612,8 @@ export function AppProvider({ children }: PropsWithChildren) {
       session,
       user,
       authReady,
+      publicContentState,
+      protectedDataState,
       isAuthenticated: Boolean(session?.user),
       membership,
       analyses: analysisState,
@@ -1833,6 +1855,8 @@ export function AppProvider({ children }: PropsWithChildren) {
     [
       session,
       authReady,
+      publicContentState,
+      protectedDataState,
       analysisState,
       dailyBiasState,
       authEmail,

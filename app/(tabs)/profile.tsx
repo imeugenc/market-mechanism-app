@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { MaterialCommunityIcons } from "@/components/StableIcons";
+import { type Href, router } from "expo-router";
 import { Alert, Linking, Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 
 import { CollapsibleSection } from "@/components/CollapsibleSection";
+import { ContentStatePanel } from "@/components/ContentStatePanel";
 import { MetricPill } from "@/components/MetricPill";
 import { PremiumCard } from "@/components/PremiumCard";
 import { PrimaryButton } from "@/components/PrimaryButton";
@@ -53,6 +54,7 @@ export default function ProfileScreen() {
     membership,
     paymentRequests,
     personalRequests,
+    protectedDataState,
     requests,
     session,
     signOut,
@@ -218,8 +220,18 @@ export default function ProfileScreen() {
         </View>
       </PremiumCard>
 
-      <SectionHeader eyebrow="Profil membru" title="Despre mine" />
-      <View style={styles.panel}>
+      <View style={styles.shortcutGrid}>
+        <ProfileShortcut icon="file-chart-outline" title="Analizele mele" meta={`${requests.length + personalRequests.length} elemente`} onPress={() => router.push("/(tabs)/requests")} />
+        <ProfileShortcut icon="star-outline" title="Favorite" meta={`${favorites.length} salvate`} onPress={() => router.push("/favorites" as Href)} />
+        <ProfileShortcut icon="message-text-outline" title="Conversații" meta={`${contactMessages.length} fire`} onPress={() => router.push("/contact")} />
+        <ProfileShortcut icon="shield-crown-outline" title="Membership" meta={currentPlanLabel} onPress={() => router.push("/(tabs)/membership")} />
+      </View>
+
+      {hasSession && protectedDataState === "loading" ? <ContentStatePanel kind="loading" title="Se încarcă datele contului…" compact /> : null}
+      {hasSession && protectedDataState === "error" ? <ContentStatePanel kind="error" title="Unele date ale contului nu au putut fi încărcate" compact /> : null}
+      {hasSession && protectedDataState === "partial" ? <ContentStatePanel kind="error" title="O parte din datele contului nu s-a încărcat" message="Secțiunile disponibile pot fi folosite în continuare." compact /> : null}
+
+      <CollapsibleSection title="Profil de trading" eyebrow="Despre mine" caption="Experiență, piețe, stil, sesiuni și obiective.">
         {hasSession ? (
           isEditingAbout ? (
             <>
@@ -296,7 +308,7 @@ export default function ProfileScreen() {
         ) : (
           <Text style={styles.body}>Autentifică-te pentru a completa secțiunea „Despre mine”.</Text>
         )}
-      </View>
+      </CollapsibleSection>
 
       <SectionHeader eyebrow="Contul meu" title="Acces și abonament" />
       <View style={styles.panel}>
@@ -338,9 +350,7 @@ export default function ProfileScreen() {
       </View>
 
       {hasSession ? (
-        <>
-          <SectionHeader eyebrow="Securitate" title="Schimbă parola" />
-          <View style={styles.panel}>
+        <CollapsibleSection title="Securitate și parolă" eyebrow="Cont">
             <Text style={styles.body}>Actualizează parola direct din profil, fără să părăsești aplicația.</Text>
             <TextInput
               value={newPassword}
@@ -360,8 +370,7 @@ export default function ProfileScreen() {
             />
             {passwordMessage ? <Text style={styles.successMessage}>{passwordMessage}</Text> : null}
             <PrimaryButton label="Actualizează parola" onPress={() => void handlePasswordChange()} />
-          </View>
-        </>
+        </CollapsibleSection>
       ) : null}
 
       <CollapsibleSection
@@ -473,6 +482,7 @@ export default function ProfileScreen() {
         caption="Salvezi briefinguri, AAR-uri și postări Altcoins pentru acces rapid din profil."
         rightLabel={String(favorites.length)}
       >
+        <PrimaryButton label="Deschide biblioteca Favorite" variant="ghost" onPress={() => router.push("/favorites" as Href)} />
         {favorites.length ? (
           favorites.map((item) => (
             <Pressable
@@ -485,12 +495,12 @@ export default function ProfileScreen() {
                 }
 
                 if (item.contentType === "altcoin") {
-                  router.push("/(tabs)/markets/altcoins");
+                  router.push(`/altcoin/${item.contentId}` as Href);
                   return;
                 }
 
-                if (item.marketLabel) {
-                  router.push(`/(tabs)/markets/${item.marketLabel}`);
+                if (item.contentType === "analysis") {
+                  router.push(`/analysis/${item.contentId}` as Href);
                 }
               }}
             >
@@ -545,6 +555,16 @@ export default function ProfileScreen() {
 
       {isAdmin ? <PrimaryButton label="Deschide consola creator" onPress={() => router.push("/admin")} /> : null}
     </Screen>
+  );
+}
+
+function ProfileShortcut({ icon, title, meta, onPress }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; title: string; meta: string; onPress: () => void }) {
+  return (
+    <Pressable style={styles.shortcut} onPress={onPress}>
+      <View style={styles.shortcutIcon}><MaterialCommunityIcons name={icon} color={colors.gold} size={20} /></View>
+      <View style={styles.shortcutCopy}><Text style={styles.shortcutTitle}>{title}</Text><Text style={styles.shortcutMeta}>{meta}</Text></View>
+      <MaterialCommunityIcons name="chevron-right" color={colors.textSoft} size={20} />
+    </Pressable>
   );
 }
 
@@ -606,6 +626,34 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: spacing.sm,
   },
+  shortcutGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  shortcut: {
+    alignItems: "center",
+    backgroundColor: colors.bgGlass,
+    borderColor: colors.borderSubtle,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flexBasis: 240,
+    flexDirection: "row",
+    flexGrow: 1,
+    gap: spacing.sm,
+    padding: 14,
+  },
+  shortcutIcon: {
+    alignItems: "center",
+    backgroundColor: "rgba(212,175,55,0.08)",
+    borderRadius: 20,
+    height: 40,
+    justifyContent: "center",
+    width: 40,
+  },
+  shortcutCopy: { flex: 1, gap: 3 },
+  shortcutTitle: { color: colors.textStrong, fontSize: typography.body, fontWeight: "800" },
+  shortcutMeta: { color: colors.textMuted, fontSize: typography.small },
   panel: {
     borderWidth: 1,
     borderColor: colors.borderSubtle,

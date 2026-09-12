@@ -1,414 +1,141 @@
-import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { type Href, router, Stack, useLocalSearchParams } from "expo-router";
+import { useState } from "react";
 
+import { ContentStatePanel } from "@/components/ContentStatePanel";
 import { DailyVideoCard } from "@/components/DailyVideoCard";
-import { MetricPill } from "@/components/MetricPill";
-import { PremiumCard } from "@/components/PremiumCard";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { ReviewCard } from "@/components/ReviewCard";
 import { Screen } from "@/components/Screen";
 import { SectionHeader } from "@/components/SectionHeader";
+import { SegmentedControl } from "@/components/SegmentedControl";
+import { CORE_MARKETS } from "@/constants/markets";
+import { canAccessPremiumContent } from "@/features/content/access";
+import { isPublishedToday, sortNewest } from "@/lib/contentAvailability";
 import { displayPlan } from "@/lib/display";
-import { canAccessPremiumContent, groupAnalysesByDate, groupReviewsByDate } from "@/features/content/access";
 import { formatDailyLabel } from "@/lib/format";
-import { sanitizeRemoteImageUrl } from "@/lib/media";
+import { useClientReady } from "@/hooks/useResponsiveWeb";
 import { useAppState } from "@/providers/AppProvider";
 import { colors, radii, spacing, typography } from "@/theme";
-import { CORE_MARKETS } from "@/constants/markets";
 import { Market } from "@/types/domain";
+
+type MarketView = "current" | "history";
 
 export function MarketDetailScreen() {
   const { market } = useLocalSearchParams<{ market?: string }>();
-  const { analyses, dailyBiases, favorites, membership, reviews, toggleFavorite, trackView } = useAppState();
+  const { analyses, dailyBiases, favorites, membership, publicContentState, reviews, toggleFavorite, trackView } = useAppState();
+  const [view, setView] = useState<MarketView>("current");
+  const clientReady = useClientReady();
   const normalizedMarket = (market ?? "").trim().toUpperCase() as Market;
   const isValidMarket = CORE_MARKETS.includes(normalizedMarket);
 
+  if (!clientReady) {
+    return <Screen><ContentStatePanel kind="loading" title="Se încarcă piața…" /></Screen>;
+  }
+
   if (!isValidMarket) {
-    return (
-      <Screen>
-        <Stack.Screen
-          options={{
-            title: "Piață",
-            headerBackTitle: "",
-            headerBackButtonDisplayMode: "minimal",
-          }}
-        />
-        <SectionHeader title="Piața nu a fost găsită" caption="Verifică simbolul pieței și încearcă din nou." />
-      </Screen>
-    );
+    return <Screen><Stack.Screen options={{ title: "Piață", headerBackTitle: "", headerBackButtonDisplayMode: "minimal" }} /><ContentStatePanel kind="empty" title="Piața nu a fost găsită" message="Verifică simbolul și revino la lista piețelor." /><PrimaryButton label="Înapoi la piețe" onPress={() => router.replace("/(tabs)/markets")} /></Screen>;
   }
 
-  const marketAnalyses = analyses
-    .filter((item) => item.market === normalizedMarket)
-    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
-  const marketReviews = reviews.filter((item) => item.market === normalizedMarket);
-  const marketBiases = dailyBiases
-    .filter((item) => item.market === normalizedMarket)
-    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
-  const reviewGroups = groupReviewsByDate(marketReviews);
-  const grouped = groupAnalysesByDate(marketAnalyses);
-  const latest = marketAnalyses[0];
+  const marketAnalyses = sortNewest(analyses.filter((item) => item.market === normalizedMarket));
+  const marketReviews = sortNewest(reviews.filter((item) => item.market === normalizedMarket));
+  const marketBiases = sortNewest(dailyBiases.filter((item) => item.market === normalizedMarket));
+  const todayAnalysis = marketAnalyses.find((item) => isPublishedToday(item.publishedAt));
+  const todayBias = marketBiases.find((item) => isPublishedToday(item.publishedAt));
+  const latestAnalysis = marketAnalyses[0];
+  const latestBias = marketBiases[0];
+  const latestReview = marketReviews[0];
+  const hasAnyContent = Boolean(latestAnalysis || latestBias || latestReview);
+  const contentReady = publicContentState === "ready" || publicContentState === "partial";
 
-  if (!latest && !marketReviews.length && !marketBiases.length) {
-    return (
-      <Screen>
-        <Stack.Screen
-          options={{
-            title: normalizedMarket,
-            headerBackTitle: "",
-            headerBackButtonDisplayMode: "minimal",
-          }}
-        />
-        <SectionHeader title="Piață indisponibilă" caption="Nu există încă briefinguri pentru această piață." />
-      </Screen>
-    );
-  }
-
-  const locked = latest ? !canAccessPremiumContent(membership.currentPlan, latest) : membership.currentPlan === "FREE";
+  const toggleItemFavorite = (input: { contentType: "analysis" | "review"; contentId: string; title: string; subtitle?: string }) => {
+    void toggleFavorite({ ...input, marketLabel: normalizedMarket }).then((result) => {
+      Alert.alert(result.success ? "Favorite actualizate" : "Actualizare eșuată", result.message);
+    });
+  };
 
   return (
     <Screen>
-      <Stack.Screen
-        options={{
-          title: normalizedMarket,
-          headerBackTitle: "",
-          headerBackButtonDisplayMode: "minimal",
-        }}
-      />
-      <PremiumCard>
-        <PrimaryButton label="Înapoi la piețe" variant="ghost" onPress={() => router.push("/(tabs)/markets")} />
-        <Text style={styles.market}>{normalizedMarket}</Text>
-        <Text style={styles.title}>Sistem de briefing zilnic</Text>
-        <Text style={styles.summary}>
-          Briefingurile sunt grupate pe zile și ordonate cu cele mai noi primele. Fiecare zi conține video-ul principal publicat pentru piața selectată.
-        </Text>
-        <View style={styles.heroBand}>
-          <Text style={styles.heroBandText}>{locked ? "Acces Premium necesar" : "Briefing activ"}</Text>
-          <Text style={styles.heroBandText}>{latest ? formatDailyLabel(latest.publishedAt) : "Fără video astăzi"}</Text>
-        </View>
-        <View style={styles.metrics}>
-          <MetricPill label="Plan" value={displayPlan(membership.currentPlan)} />
-          <MetricPill label="Piață" value={normalizedMarket} />
-          <MetricPill label="Ultimul update" value={latest ? formatDailyLabel(latest.publishedAt) : "Indisponibil"} />
-        </View>
-        <View style={styles.actions}>
-          <PrimaryButton
-            label={locked ? "Deblochează Premium" : "Marchează vizualizare"}
-            onPress={() => {
-              if (locked) {
-                router.push("/(tabs)/membership");
-                return;
-              }
-              trackView(true);
-            }}
-          />
-          <PrimaryButton label="Solicită analiză" variant="ghost" onPress={() => router.push("/(tabs)/requests")} />
-        </View>
-      </PremiumCard>
+      <Stack.Screen options={{ title: normalizedMarket, headerBackTitle: "", headerBackButtonDisplayMode: "minimal" }} />
+      <View style={styles.header}>
+        <Pressable onPress={() => router.replace("/(tabs)/markets")}><Text style={styles.back}>‹ Piețe</Text></Pressable>
+        <View style={styles.headerMain}><Text style={styles.market}>{normalizedMarket}</Text><Text style={styles.title}>Context de piață</Text></View>
+        <View style={styles.plan}><Text style={styles.planText}>{displayPlan(membership.currentPlan)}</Text></View>
+      </View>
 
-      <SectionHeader
-        eyebrow="Daily Bias"
-        title={`Contextul zilei • ${normalizedMarket}`}
-        caption="Istoricul este separat pe piață. Deschide fiecare intrare pentru contextul complet și rezultatul review-ului."
-      />
-      {marketBiases.length ? (
-        <View style={styles.biasList}>
-          {marketBiases.slice(0, 8).map((bias) => (
-            <Pressable key={bias.id} style={styles.biasCard} onPress={() => router.push(`/bias/${bias.id}` as Href)}>
-              {sanitizeRemoteImageUrl(bias.chartImage) ? <Image source={{ uri: sanitizeRemoteImageUrl(bias.chartImage) }} style={styles.biasImage} /> : null}
-              <View style={styles.biasTopRow}>
-                <Text style={styles.biasDate}>{formatDailyLabel(bias.publishedAt)}</Text>
-                <Text style={styles.biasOutcome}>{bias.outcome}</Text>
-              </View>
-              <Text style={styles.biasTitle}>{bias.forecastedBias} · {bias.confidence} confidence</Text>
-              <Text style={styles.biasNotes} numberOfLines={2}>{bias.notes}</Text>
+      <SegmentedControl value={view} options={[{ value: "current", label: "Curent" }, { value: "history", label: "Istoric" }]} onChange={setView} />
+
+      {publicContentState === "loading" ? <ContentStatePanel kind="loading" title={`Se încarcă ${normalizedMarket}…`} /> : null}
+      {publicContentState === "error" ? <ContentStatePanel kind="error" /> : null}
+      {publicContentState === "partial" ? <ContentStatePanel kind="error" title="O parte din conținut nu s-a încărcat" message="Datele disponibile pentru această piață sunt afișate mai jos." compact /> : null}
+      {contentReady && !hasAnyContent ? <ContentStatePanel kind="empty" title={`Nu există încă conținut publicat pentru ${normalizedMarket}`} message="Piața rămâne disponibilă. Conținutul va apărea după prima publicare." /> : null}
+
+      {contentReady && hasAnyContent && view === "current" ? (
+        <>
+          {!todayAnalysis && !todayBias ? <ContentStatePanel kind="empty" title="Niciun briefing sau Bias publicat astăzi" message={latestAnalysis || latestBias ? `Cel mai recent conținut rămâne disponibil în Istoric.` : "Revino după următoarea publicare."} compact /> : null}
+
+          <SectionHeader eyebrow="Daily Bias" title={todayBias ? "Bias-ul curent" : "Cel mai recent Bias"} />
+          {(todayBias ?? latestBias) ? (
+            <Pressable style={styles.biasCard} onPress={() => router.push(`/bias/${(todayBias ?? latestBias)!.id}` as Href)}>
+              <View style={styles.row}><Text style={styles.biasDirection}>{(todayBias ?? latestBias)!.forecastedBias}</Text><Text style={styles.date}>{formatDailyLabel((todayBias ?? latestBias)!.publishedAt)}</Text></View>
+              <Text style={styles.biasConfidence}>{(todayBias ?? latestBias)!.confidence} confidence</Text>
+              <Text style={styles.body} numberOfLines={3}>{(todayBias ?? latestBias)!.notes}</Text>
+              <Text style={styles.outcome}>{(todayBias ?? latestBias)!.outcome === "Pending" ? "Rezultat în așteptare" : `Rezultat: ${(todayBias ?? latestBias)!.outcome}`}</Text>
             </Pressable>
-          ))}
-        </View>
-      ) : (
-        <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>Nu există încă Daily Bias pentru {normalizedMarket}</Text>
-          <Text style={styles.infoBody}>Când publici un bias pentru această piață din Consola Creator, acesta apare aici automat.</Text>
-        </View>
-      )}
+          ) : <ContentStatePanel kind="empty" title={`Nu există încă Daily Bias pentru ${normalizedMarket}`} compact />}
 
-      <SectionHeader
-        eyebrow="GRATUIT"
-        title={`After Action Review • ${normalizedMarket}`}
-        caption="Primele elemente din pagină sunt review-urile publice după mișcare, disponibile pentru toți utilizatorii."
-      />
-      {reviewGroups.length ? (
-        reviewGroups.map((group) => (
-          <View key={group.dateKey} style={styles.reviewGroup}>
-            <Text style={styles.reviewGroupTitle}>{formatDailyLabel(group.reviews[0].publishedAt)}</Text>
-            {group.reviews.map((review) => (
-              <ReviewCard
-                key={review.id}
-                item={review}
-                favorited={favorites.some((item) => item.contentType === "review" && item.contentId === review.id)}
-                onToggleFavorite={() =>
-                  void toggleFavorite({
-                    contentType: "review",
-                    contentId: review.id,
-                    title: review.title,
-                    subtitle: review.shortText,
-                    marketLabel: review.market,
-                  }).then((result) => {
-                    Alert.alert(result.success ? "Favorite actualizate" : "Actualizare eșuată", result.message);
-                  })
-                }
-              />
-            ))}
-          </View>
-        ))
-      ) : (
-        <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>Nu există încă review-uri pentru această piață</Text>
-          <Text style={styles.infoBody}>
-            După publicarea unui nou After Action Review, acesta va apărea aici primul, înaintea briefingului Premium.
-          </Text>
-        </View>
-      )}
-
-      <SectionHeader
-        eyebrow="Premium"
-        title={`Analiza de azi • ${normalizedMarket}`}
-        caption="Aici apare briefingul video zilnic pentru piața selectată. Utilizatorii Free îl văd blocat, membrii Premium îl deschid complet."
-      />
-      {grouped.length ? (
-        grouped.map((group) => (
-          <View key={group.dateKey} style={styles.dayBlock}>
-            <View style={styles.dayHeader}>
-              <Text style={styles.dayEyebrow}>Zi de analiză</Text>
-              <Text style={styles.dayTitle}>{formatDailyLabel(group.analyses[0].publishedAt)}</Text>
+          <SectionHeader eyebrow="Briefing" title={todayAnalysis ? "Briefing publicat astăzi" : "Ultimul briefing disponibil"} />
+          {(todayAnalysis ?? latestAnalysis) ? (
+            <View style={styles.videoWrap}>
+              <DailyVideoCard item={(todayAnalysis ?? latestAnalysis)!} locked={!canAccessPremiumContent(membership.currentPlan, (todayAnalysis ?? latestAnalysis)!)} favorited={favorites.some((item) => item.contentType === "analysis" && item.contentId === (todayAnalysis ?? latestAnalysis)!.id)} onToggleFavorite={() => toggleItemFavorite({ contentType: "analysis", contentId: (todayAnalysis ?? latestAnalysis)!.id, title: (todayAnalysis ?? latestAnalysis)!.title, subtitle: "Briefing video" })} />
+              {!canAccessPremiumContent(membership.currentPlan, (todayAnalysis ?? latestAnalysis)!) ? <PrimaryButton label="Vezi opțiunile Premium" onPress={() => router.push("/(tabs)/membership")} /> : <PrimaryButton label="Marchează ca vizualizat" variant="ghost" onPress={() => trackView(true)} />}
             </View>
+          ) : <ContentStatePanel kind="empty" title="Niciun briefing publicat încă" compact />}
 
-            {group.analyses.map((item) => {
-              const itemLocked = !canAccessPremiumContent(membership.currentPlan, item);
+          <SectionHeader eyebrow="Educație gratuită" title="Ultimul After Action Review" />
+          {latestReview ? <ReviewCard item={latestReview} favorited={favorites.some((item) => item.contentType === "review" && item.contentId === latestReview.id)} onToggleFavorite={() => toggleItemFavorite({ contentType: "review", contentId: latestReview.id, title: latestReview.title, subtitle: latestReview.shortText })} /> : <ContentStatePanel kind="empty" title={`Nu există încă un AAR pentru ${normalizedMarket}`} compact />}
+        </>
+      ) : null}
 
-              return (
-                <View key={item.id} style={styles.videoCard}>
-                  <DailyVideoCard
-                    item={item}
-                    locked={itemLocked}
-                    favorited={favorites.some((favorite) => favorite.contentType === "analysis" && favorite.contentId === item.id)}
-                    onToggleFavorite={() =>
-                      void toggleFavorite({
-                        contentType: "analysis",
-                        contentId: item.id,
-                        title: item.title,
-                        subtitle: "Analiza de azi",
-                        marketLabel: item.market,
-                      }).then((result) => {
-                        Alert.alert(result.success ? "Favorite actualizate" : "Actualizare eșuată", result.message);
-                      })
-                    }
-                  />
-                  <View style={styles.videoActions}>
-                    <PrimaryButton
-                      label={itemLocked ? "Deblochează analiza zilnică" : "Marchează vizualizare"}
-                      onPress={() => {
-                        if (itemLocked) {
-                          router.push("/(tabs)/membership");
-                          return;
-                        }
-                        trackView(true);
-                      }}
-                      variant={itemLocked ? "gold" : "ghost"}
-                    />
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        ))
-      ) : (
-        <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>Nu există încă analiză video pentru azi</Text>
-          <Text style={styles.infoBody}>După publicarea unui briefing nou, acesta va apărea aici automat, grupat pe data curentă.</Text>
-        </View>
-      )}
+      {contentReady && hasAnyContent && view === "history" ? (
+        <>
+          <SectionHeader eyebrow="Istoric" title="Daily Bias" />
+          {marketBiases.length ? <View style={styles.list}>{marketBiases.map((bias) => <Pressable key={bias.id} style={styles.historyRow} onPress={() => router.push(`/bias/${bias.id}` as Href)}><View style={styles.row}><Text style={styles.historyTitle}>{bias.forecastedBias} · {bias.confidence}</Text><Text style={styles.date}>{formatDailyLabel(bias.publishedAt)}</Text></View><Text style={styles.body} numberOfLines={2}>{bias.notes}</Text><Text style={styles.outcome}>{bias.outcome === "Pending" ? "Rezultat în așteptare" : bias.outcome}</Text></Pressable>)}</View> : <ContentStatePanel kind="empty" title="Nu există Bias-uri istorice" compact />}
+          <SectionHeader eyebrow="Istoric" title="After Action Review" />
+          {marketReviews.length ? <View style={styles.list}>{marketReviews.map((review) => <ReviewCard key={review.id} item={review} favorited={favorites.some((item) => item.contentType === "review" && item.contentId === review.id)} onToggleFavorite={() => toggleItemFavorite({ contentType: "review", contentId: review.id, title: review.title, subtitle: review.shortText })} />)}</View> : <ContentStatePanel kind="empty" title="Nu există AAR-uri istorice" compact />}
+          <SectionHeader eyebrow="Istoric Premium" title="Briefinguri video" />
+          {marketAnalyses.length ? <View style={styles.list}>{marketAnalyses.map((item) => <DailyVideoCard key={item.id} item={item} locked={!canAccessPremiumContent(membership.currentPlan, item)} favorited={favorites.some((favorite) => favorite.contentType === "analysis" && favorite.contentId === item.id)} onToggleFavorite={() => toggleItemFavorite({ contentType: "analysis", contentId: item.id, title: item.title, subtitle: "Briefing video" })} />)}</View> : <ContentStatePanel kind="empty" title="Nu există briefinguri istorice" compact />}
+        </>
+      ) : null}
 
-      <SectionHeader
-        eyebrow="Custom"
-        title="Solicită analiză personalizată"
-        caption="Dacă vrei o analiză separată pentru un alt activ, poți deschide direct fluxul de cerere personalizată."
-      />
-      <View style={styles.ctaCard}>
-        <Text style={styles.ctaTitle}>Ai nevoie de context suplimentar?</Text>
-        <Text style={styles.ctaBody}>
-          Trimite o cerere pentru altcoin sau pentru un setup specific. Plata se confirmă manual, iar livrarea începe după confirmare.
-        </Text>
-        <PrimaryButton label="Deschide Analize personale" onPress={() => router.push("/(tabs)/requests")} />
+      <View style={styles.privateCard}>
+        <View style={styles.privateCopy}><Text style={styles.privateTitle}>Ai nevoie de o analiză personală?</Text><Text style={styles.body}>Trimite o cerere separată pentru un activ sau setup specific.</Text></View>
+        <PrimaryButton label="Solicită analiză" onPress={() => router.push("/(tabs)/requests")} />
       </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  market: {
-    color: colors.gold,
-    fontSize: typography.small,
-    letterSpacing: 1.5,
-    textTransform: "uppercase",
-    fontWeight: "800",
-  },
-  title: {
-    color: colors.textStrong,
-    fontSize: 30,
-    fontWeight: "800",
-    lineHeight: 34,
-  },
-  summary: {
-    color: colors.textSoft,
-    fontSize: typography.body,
-    lineHeight: 22,
-  },
-  heroBand: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: spacing.sm,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    backgroundColor: colors.bgMuted,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  heroBandText: {
-    color: colors.gold,
-    fontSize: typography.small,
-    fontWeight: "700",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-  },
-  metrics: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
-  actions: {
-    gap: spacing.sm,
-  },
-  biasList: {
-    gap: spacing.sm,
-  },
-  biasCard: {
-    backgroundColor: colors.bgGlass,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    gap: 7,
-    padding: 16,
-  },
-  biasImage: {
-    width: "100%",
-    height: 170,
-    borderRadius: radii.md,
-  },
-  biasTopRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: spacing.sm,
-  },
-  biasDate: {
-    color: colors.gold,
-    fontSize: typography.small,
-    fontWeight: "800",
-  },
-  biasOutcome: {
-    color: colors.success,
-    fontSize: typography.small,
-    fontWeight: "800",
-  },
-  biasTitle: {
-    color: colors.textStrong,
-    fontSize: typography.body,
-    fontWeight: "800",
-  },
-  biasNotes: {
-    color: colors.textMuted,
-    fontSize: typography.small,
-    lineHeight: 19,
-  },
-  dayBlock: {
-    borderRadius: radii.xl,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    backgroundColor: colors.bgPanel,
-    padding: 18,
-    gap: spacing.md,
-  },
-  dayHeader: {
-    gap: 4,
-  },
-  dayEyebrow: {
-    color: colors.gold,
-    fontSize: typography.caption,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 1.2,
-  },
-  dayTitle: {
-    color: colors.textStrong,
-    fontSize: typography.title,
-    fontWeight: "800",
-  },
-  videoCard: {
-    borderRadius: radii.lg,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    backgroundColor: colors.bgMuted,
-  },
-  videoActions: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-  },
-  infoCard: {
-    borderRadius: radii.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.bgPanel,
-    padding: 18,
-    gap: spacing.sm,
-  },
-  infoTitle: {
-    color: colors.textStrong,
-    fontSize: typography.section,
-    fontWeight: "800",
-  },
-  infoBody: {
-    color: colors.textSoft,
-    fontSize: typography.body,
-    lineHeight: 22,
-  },
-  ctaCard: {
-    borderRadius: radii.xl,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.bgGlass,
-    padding: 18,
-    gap: spacing.sm,
-  },
-  ctaTitle: {
-    color: colors.textStrong,
-    fontSize: typography.section,
-    fontWeight: "800",
-  },
-  ctaBody: {
-    color: colors.textSoft,
-    fontSize: typography.body,
-    lineHeight: 22,
-  },
-  reviewGroup: {
-    gap: spacing.sm,
-  },
-  reviewGroupTitle: {
-    color: colors.textStrong,
-    fontSize: typography.section,
-    fontWeight: "800",
-  },
+  header: { alignItems: "center", flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  back: { color: colors.textMuted, fontSize: typography.body, fontWeight: "700" },
+  headerMain: { flex: 1, minWidth: 150 },
+  market: { color: colors.gold, fontSize: typography.small, fontWeight: "800", letterSpacing: 1.5 },
+  title: { color: colors.textStrong, fontSize: 30, fontWeight: "800" },
+  plan: { backgroundColor: colors.bgMuted, borderColor: colors.borderSubtle, borderRadius: radii.pill, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8 },
+  planText: { color: colors.textMuted, fontSize: typography.small, fontWeight: "800" },
+  biasCard: { backgroundColor: "rgba(212,175,55,0.045)", borderColor: colors.borderStrong, borderRadius: radii.lg, borderWidth: 1, gap: 8, padding: 18 },
+  biasDirection: { color: colors.textStrong, fontSize: typography.title, fontWeight: "800" },
+  biasConfidence: { color: colors.gold, fontSize: typography.small, fontWeight: "800" },
+  row: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", gap: spacing.sm },
+  date: { color: colors.textSoft, fontSize: typography.small },
+  body: { color: colors.textMuted, fontSize: typography.body, lineHeight: 22 },
+  outcome: { color: colors.textSoft, fontSize: typography.small, fontWeight: "700" },
+  videoWrap: { gap: spacing.sm },
+  list: { gap: spacing.sm },
+  historyRow: { backgroundColor: colors.bgGlass, borderColor: colors.borderSubtle, borderRadius: radii.md, borderWidth: 1, gap: 7, padding: 15 },
+  historyTitle: { color: colors.textStrong, fontSize: typography.body, fontWeight: "800" },
+  privateCard: { alignItems: "center", backgroundColor: colors.bgMuted, borderColor: colors.borderSubtle, borderRadius: radii.lg, borderWidth: 1, flexDirection: "row", flexWrap: "wrap", gap: spacing.md, justifyContent: "space-between", padding: 18 },
+  privateCopy: { flex: 1, gap: 5, minWidth: 220 },
+  privateTitle: { color: colors.textStrong, fontSize: typography.section, fontWeight: "800" },
 });

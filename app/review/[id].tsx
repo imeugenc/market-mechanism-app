@@ -3,11 +3,13 @@ import { Linking, StyleSheet, Text, TextInput, View } from "react-native";
 import { type Href, router, Stack, useLocalSearchParams } from "expo-router";
 
 import { PremiumCard } from "@/components/PremiumCard";
+import { ContentStatePanel } from "@/components/ContentStatePanel";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Screen } from "@/components/Screen";
 import { createContentComment, deleteContentComment, fetchContentComments } from "@/features/comments/service";
 import { useAppState } from "@/providers/AppProvider";
 import { formatDate } from "@/lib/format";
+import { useClientReady } from "@/hooks/useResponsiveWeb";
 import { sanitizeRemoteImageUrl } from "@/lib/media";
 import { colors, radii, spacing, typography } from "@/theme";
 import { Image } from "react-native";
@@ -15,21 +17,25 @@ import { ContentComment } from "@/types/domain";
 
 export default function ReviewDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { dailyBiases, session, user, reviews } = useAppState();
+  const { dailyBiases, publicContentState, session, user, reviews } = useAppState();
+  const clientReady = useClientReady();
   const review = reviews.find((item) => item.id === id);
   const relatedBias = dailyBiases.find((item) => item.relatedReviewId === id);
   const chartImage = sanitizeRemoteImageUrl(review?.chartImage);
   const [comments, setComments] = useState<ContentComment[]>([]);
   const [commentBody, setCommentBody] = useState("");
   const [commentError, setCommentError] = useState("");
+  const [commentsLoading, setCommentsLoading] = useState(true);
 
   useEffect(() => {
     if (!id) {
       return;
     }
 
+    setCommentsLoading(true);
     void fetchContentComments("review", id).then((result) => {
       setComments(result.data ?? []);
+      setCommentsLoading(false);
     });
   }, [id]);
 
@@ -62,14 +68,15 @@ export default function ReviewDetailScreen() {
     setCommentError("");
   };
 
+  if (!clientReady || publicContentState === "loading") return <Screen><ContentStatePanel kind="loading" title="Se încarcă After Action Review…" /></Screen>;
+  if (publicContentState === "error") return <Screen><ContentStatePanel kind="error" /></Screen>;
+
   if (!review) {
     return (
       <Screen>
         <Stack.Screen options={{ title: "After Action Review", headerBackTitle: "", headerBackButtonDisplayMode: "minimal" }} />
-        <PremiumCard>
-          <Text style={styles.title}>After Action Review indisponibil</Text>
-          <Text style={styles.body}>Acest review nu mai este disponibil sau nu a fost încă încărcat în aplicație.</Text>
-        </PremiumCard>
+        <ContentStatePanel kind="removed" title="Acest After Action Review nu mai este disponibil" />
+        <PrimaryButton label="Înapoi la piețe" onPress={() => router.replace("/(tabs)/markets")} />
       </Screen>
     );
   }
@@ -77,7 +84,7 @@ export default function ReviewDetailScreen() {
   return (
     <Screen>
       <Stack.Screen options={{ title: "After Action Review", headerBackTitle: "", headerBackButtonDisplayMode: "minimal" }} />
-      <PrimaryButton label="Înapoi" variant="ghost" onPress={() => router.back()} />
+      <PrimaryButton label={`Înapoi la ${review.market}`} variant="ghost" onPress={() => router.replace(`/(tabs)/markets/${review.market}`)} />
       <View style={styles.card}>
         {chartImage ? (
           <Image source={{ uri: chartImage }} style={styles.image} />
@@ -113,7 +120,7 @@ export default function ReviewDetailScreen() {
           {commentError ? <Text style={styles.error}>{commentError}</Text> : null}
           <PrimaryButton label="Trimite comentariul" onPress={() => void submitComment()} />
           <View style={styles.commentsList}>
-            {comments.length ? (
+            {commentsLoading ? <ContentStatePanel kind="loading" title="Se încarcă discuția…" compact /> : comments.length ? (
               comments.map((item) => (
                 <View key={item.id} style={styles.commentRow}>
                   <Text

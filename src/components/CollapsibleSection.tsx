@@ -1,6 +1,6 @@
 import { PropsWithChildren, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@/components/StableIcons";
 
 import { colors, radii, spacing, typography } from "@/theme";
 

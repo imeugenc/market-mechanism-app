@@ -43,6 +43,25 @@ function resolveRequestPath(urlPath) {
     }
   }
 
+  const htmlPath = `${candidatePath}.html`;
+  if (existsSync(htmlPath)) {
+    return { filePath: htmlPath, isFallback: false };
+  }
+
+  const dynamicRoutes = [
+    [/^markets\/[^/]+$/, "markets/[market].html"],
+    [/^market\/[^/]+$/, "market/[market].html"],
+    [/^bias\/[^/]+$/, "bias/[id].html"],
+    [/^review\/[^/]+$/, "review/[id].html"],
+    [/^analysis\/[^/]+$/, "analysis/[id].html"],
+    [/^altcoin\/[^/]+$/, "altcoin/[id].html"],
+    [/^member\/[^/]+$/, "member/[id].html"],
+  ];
+  const dynamicMatch = dynamicRoutes.find(([pattern]) => pattern.test(relativePath));
+  if (dynamicMatch) {
+    return { filePath: path.join(distDir, dynamicMatch[1]), isFallback: false };
+  }
+
   return { filePath: path.join(distDir, "index.html"), isFallback: true };
 }
 

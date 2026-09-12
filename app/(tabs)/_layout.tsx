@@ -1,30 +1,45 @@
-import { FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
+import { FontAwesome5, MaterialCommunityIcons } from "@/components/StableIcons";
+import { BottomTabBar, type BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Tabs } from "expo-router";
-import { Platform, useWindowDimensions } from "react-native";
 
-import { isOwnerEmail } from "@/constants/access";
-import { useAppState } from "@/providers/AppProvider";
 import { colors } from "@/theme";
 
-export default function TabsLayout() {
-  const { session, user } = useAppState();
-  const isAdmin = user?.isAdmin || isOwnerEmail(session?.user?.email);
-  const { width } = useWindowDimensions();
-  const isWeb = Platform.OS === "web";
-  const isCompactWeb = isWeb && width < 820;
+const parentTabByRoute: Record<string, string> = {
+  membership: "profile",
+  news: "markets",
+  "admin-entry": "profile",
+  altcoins: "markets",
+  "markets/[market]": "markets",
+  "markets/altcoins": "markets",
+};
 
+function MemberTabBar(props: BottomTabBarProps) {
+  const currentRoute = props.state.routes[props.state.index]?.name;
+  const parentRoute = parentTabByRoute[currentRoute];
+
+  if (!parentRoute) {
+    return <BottomTabBar {...props} />;
+  }
+
+  const parentIndex = props.state.routes.findIndex((route) => route.name === parentRoute);
+  return <BottomTabBar {...props} state={{ ...props.state, index: parentIndex }} />;
+}
+
+export default function TabsLayout() {
   return (
     <Tabs
+      tabBar={(props) => <MemberTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        tabBarLabelPosition: isCompactWeb ? "below-icon" : isWeb ? "beside-icon" : "below-icon",
+        tabBarPosition: "bottom",
+        tabBarLabelPosition: "below-icon",
         tabBarStyle: {
           backgroundColor: "#090909",
           borderTopColor: "rgba(212, 175, 55, 0.12)",
-          height: isCompactWeb ? 76 : isWeb ? 72 : 88,
-          paddingTop: isCompactWeb ? 6 : 8,
-          paddingBottom: isCompactWeb ? 12 : isWeb ? 8 : 0,
-          paddingHorizontal: isCompactWeb ? 4 : 0,
+          height: 76,
+          paddingTop: 6,
+          paddingBottom: 12,
+          paddingHorizontal: 4,
         },
         tabBarActiveTintColor: colors.gold,
         tabBarInactiveTintColor: "#6F6A5C",
@@ -45,24 +60,10 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="news"
-        options={{
-          title: "News",
-          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="newspaper-variant-outline" color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
         name="requests"
         options={{
-          title: "Analize personale",
-          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="sword-cross" color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="membership"
-        options={{
-          title: "Upgrade",
-          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="shield-crown" color={color} size={size} />,
+          title: "Analize",
+          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="file-chart-outline" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
@@ -73,11 +74,21 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="membership"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="news"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="admin-entry"
         options={{
-          href: isAdmin ? undefined : null,
-          title: "Admin",
-          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="shield-account" color={color} size={size} />,
+          href: null,
         }}
       />
       <Tabs.Screen

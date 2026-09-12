@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { type Href, router } from "expo-router";
 import { Pressable, StyleSheet } from "react-native";
 
 import { DailyVideoCard } from "@/components/DailyVideoCard";
@@ -16,7 +16,7 @@ export function ContentPreviewCard({
   onToggleFavorite?: () => void;
 }) {
   return (
-    <Pressable onPress={() => router.push(locked ? "/(tabs)/membership" : `/(tabs)/markets/${item.market}`)} style={styles.wrapper}>
+    <Pressable onPress={() => router.push((locked ? "/(tabs)/membership" : `/analysis/${item.id}`) as Href)} style={styles.wrapper}>
       <DailyVideoCard item={item} locked={locked} favorited={favorited} onToggleFavorite={onToggleFavorite} />
     </Pressable>
   );

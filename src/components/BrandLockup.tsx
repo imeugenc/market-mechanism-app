@@ -1,6 +1,7 @@
-import { Image, ImageSourcePropType, Platform, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Image, ImageSourcePropType, StyleSheet, Text, View } from "react-native";
 
 import { colors, spacing, typography } from "@/theme";
+import { useResponsiveWeb } from "@/hooks/useResponsiveWeb";
 
 const BRAND_MARK = require("../../assets/branding/market-mechanism-mark.png") as ImageSourcePropType;
 
@@ -10,9 +11,8 @@ type BrandLockupProps = {
 };
 
 export function BrandLockup({ mode = "compact", align = "left" }: BrandLockupProps) {
-  const { width } = useWindowDimensions();
+  const { isCompactWeb } = useResponsiveWeb();
   const isHero = mode === "hero";
-  const isCompactWeb = Platform.OS === "web" && width < 820;
 
   return (
     <View style={[styles.wrap, align === "center" && styles.wrapCenter]}>
@@ -70,8 +70,8 @@ const styles = StyleSheet.create({
     height: 96,
   },
   markCompact: {
-    width: 112,
-    height: 112,
+    width: 82,
+    height: 82,
   },
   markHero: {
     width: 192,

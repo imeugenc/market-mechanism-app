@@ -1,5 +1,5 @@
 import { Pressable, Image, StyleSheet, Text, View } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@/components/StableIcons";
 import { router } from "expo-router";
 
 import { AfterActionReview } from "@/types/domain";

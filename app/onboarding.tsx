@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { router } from "expo-router";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@/components/StableIcons";
 import { StyleSheet, Text, View } from "react-native";
 
 import { BrandLockup } from "@/components/BrandLockup";

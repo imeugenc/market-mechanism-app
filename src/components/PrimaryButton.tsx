@@ -1,7 +1,8 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { colors, radii, typography } from "@/theme";
+import { useResponsiveWeb } from "@/hooks/useResponsiveWeb";
 
 export function PrimaryButton({
   label,
@@ -12,8 +13,7 @@ export function PrimaryButton({
   onPress: () => void;
   variant?: "gold" | "ghost";
 }) {
-  const { width } = useWindowDimensions();
-  const isCompactWeb = Platform.OS === "web" && width < 820;
+  const { isCompactWeb } = useResponsiveWeb();
 
   return (
     <Pressable

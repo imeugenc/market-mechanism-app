@@ -1,8 +1,9 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@/components/StableIcons";
 import { BlurView } from "expo-blur";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { formatDailyLabel } from "@/lib/format";
+import { isPublishedToday } from "@/lib/contentAvailability";
 import { DailyAnalysis } from "@/types/domain";
 import { colors, radii, typography } from "@/theme";
 
@@ -46,7 +47,7 @@ export function DailyVideoCard({
           <View style={styles.playWrap}>
             <MaterialCommunityIcons name={locked ? "lock-outline" : "play"} size={24} color={colors.gold} />
           </View>
-          <Text style={styles.playerTitle}>Analiza de azi</Text>
+          <Text style={styles.playerTitle}>{isPublishedToday(item.publishedAt) ? "Briefingul de astăzi" : "Briefing video"}</Text>
           <Text style={styles.playerSubtitle}>{item.title || "Briefing video zilnic"}</Text>
         </View>
         {!locked ? (

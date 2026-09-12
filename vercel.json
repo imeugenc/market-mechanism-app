@@ -8,6 +8,26 @@
       "handle": "filesystem"
     },
     {
+      "src": "/(markets|profile|membership|requests|favorites|news|admin|contact|onboarding|altcoins|admin-entry)",
+      "dest": "/$1.html"
+    },
+    {
+      "src": "/auth/(callback|login|register|forgot-password|reset-password)",
+      "dest": "/auth/$1.html"
+    },
+    {
+      "src": "/markets/([^/]+)",
+      "dest": "/markets/[market].html"
+    },
+    {
+      "src": "/market/([^/]+)",
+      "dest": "/market/[market].html"
+    },
+    {
+      "src": "/(bias|review|analysis|altcoin|member)/([^/]+)",
+      "dest": "/$1/[id].html"
+    },
+    {
       "src": "/.*",
       "dest": "/index.html"
     }

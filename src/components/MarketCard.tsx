@@ -1,13 +1,14 @@
 import { router } from "expo-router";
-import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { MARKET_DESCRIPTIONS } from "@/constants/markets";
+import { formatDate } from "@/lib/format";
 import { Market } from "@/types/domain";
 import { colors, radii, typography } from "@/theme";
+import { useResponsiveWeb } from "@/hooks/useResponsiveWeb";
 
-export function MarketCard({ market }: { market: Market }) {
-  const { width } = useWindowDimensions();
-  const isCompactWeb = Platform.OS === "web" && width < 820;
+export function MarketCard({ market, latestPublishedAt }: { market: Market; latestPublishedAt?: string }) {
+  const { isCompactWeb } = useResponsiveWeb();
 
   return (
     <Pressable
@@ -16,9 +17,7 @@ export function MarketCard({ market }: { market: Market }) {
     >
       <View style={styles.topRow}>
         <Text style={styles.market}>{market}</Text>
-        <View style={styles.liveBadge}>
-          <Text style={styles.liveBadgeText}>Briefing</Text>
-        </View>
+        <Text style={styles.status}>{latestPublishedAt ? `Ultima actualizare · ${formatDate(latestPublishedAt)}` : "Fără conținut publicat încă"}</Text>
       </View>
       <Text style={styles.description}>{MARKET_DESCRIPTIONS[market]}</Text>
       <View style={styles.badge}>
@@ -30,6 +29,8 @@ export function MarketCard({ market }: { market: Market }) {
 
 const styles = StyleSheet.create({
   card: {
+    flexGrow: 1,
+    flexBasis: 260,
     borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.border,
@@ -62,32 +63,20 @@ const styles = StyleSheet.create({
     fontSize: typography.body,
     lineHeight: 22,
   },
-  liveBadge: {
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    backgroundColor: "rgba(212, 175, 55, 0.08)",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  liveBadgeText: {
-    color: colors.gold,
+  status: {
+    color: colors.textSoft,
     fontSize: typography.caption,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 1.1,
+    fontWeight: "700",
+    maxWidth: 150,
+    textAlign: "right",
   },
   badge: {
     alignSelf: "flex-start",
     borderRadius: radii.pill,
-    backgroundColor: "rgba(212, 175, 55, 0.12)",
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 2,
   },
   badgeText: {
-    color: colors.gold,
+    color: colors.text,
     fontSize: typography.small,
     fontWeight: "800",
     letterSpacing: 0.2,

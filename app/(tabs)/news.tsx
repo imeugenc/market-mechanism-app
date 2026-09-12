@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@/components/StableIcons";
 import { Alert, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { PremiumCard } from "@/components/PremiumCard";
 import { Screen } from "@/components/Screen";
 import { SectionHeader } from "@/components/SectionHeader";
 import { colors, radii, spacing, typography } from "@/theme";
@@ -67,13 +66,7 @@ export default function NewsScreen() {
 
   return (
     <Screen>
-      <PremiumCard>
-        <Text style={styles.eyebrow}>News</Text>
-        <Text style={styles.heroTitle}>Calendar rapid pentru macro și crypto.</Text>
-        <Text style={styles.heroBody}>
-          Secțiunea News rămâne simplă și practică: deschizi rapid calendarul relevant, fără feed-uri externe în aplicație și fără zgomot inutil.
-        </Text>
-      </PremiumCard>
+      <SectionHeader eyebrow="Utilitar de piață" title="Calendare" caption="Acces rapid la evenimente macro și crypto, fără un feed suplimentar în aplicație." />
 
       <View style={styles.segmentWrap}>
         <Pressable

@@ -1,9 +1,10 @@
 import { PropsWithChildren, RefObject } from "react";
 import { LinearGradient } from "expo-linear-gradient";
-import { Platform, ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
+import { Platform, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { colors, spacing } from "@/theme";
+import { useResponsiveWeb } from "@/hooks/useResponsiveWeb";
 
 type ScreenProps = PropsWithChildren<{
   scroll?: boolean;
@@ -12,8 +13,7 @@ type ScreenProps = PropsWithChildren<{
 }>;
 
 export function Screen({ children, scroll = true, webMaxWidth = 1120, scrollRef }: ScreenProps) {
-  const { width } = useWindowDimensions();
-  const isCompactWeb = Platform.OS === "web" && width < 820;
+  const { isCompactWeb } = useResponsiveWeb();
 
   const content = (
     <View

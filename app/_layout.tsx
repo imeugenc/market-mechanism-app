@@ -67,6 +67,9 @@ function RootNavigator() {
           name="review/[id]"
           options={{ title: "After Action Review", headerBackTitle: "", headerBackButtonDisplayMode: "minimal" }}
         />
+        <Stack.Screen name="analysis/[id]" options={{ title: "Briefing", headerBackTitle: "", headerBackButtonDisplayMode: "minimal" }} />
+        <Stack.Screen name="altcoin/[id]" options={{ title: "Altcoins", headerBackTitle: "", headerBackButtonDisplayMode: "minimal" }} />
+        <Stack.Screen name="favorites" options={{ title: "Favorite", headerBackTitle: "", headerBackButtonDisplayMode: "minimal" }} />
       </Stack>
       <WebInstallPrompt />
     </>
