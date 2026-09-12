@@ -1,16 +1,19 @@
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import { Image, Linking, StyleSheet, Text, View } from "react-native";
 
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Screen } from "@/components/Screen";
 import { formatDate } from "@/lib/format";
+import { sanitizeRemoteImageUrl } from "@/lib/media";
 import { useAppState } from "@/providers/AppProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 
 export default function BiasDetailScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const { dailyBiases } = useAppState();
+  const { dailyBiases, reviews } = useAppState();
   const bias = dailyBiases.find((item) => item.id === id);
+  const chartImage = sanitizeRemoteImageUrl(bias?.chartImage);
+  const relatedReview = reviews.find((item) => item.id === bias?.relatedReviewId);
 
   if (!bias) {
     return (
@@ -26,6 +29,7 @@ export default function BiasDetailScreen() {
     <Screen>
       <Stack.Screen options={{ title: "Daily Bias", headerBackTitle: "", headerBackButtonDisplayMode: "minimal" }} />
       <View style={styles.card}>
+        {chartImage ? <Image source={{ uri: chartImage }} style={styles.image} /> : null}
         <Text style={styles.eyebrow}>BIAS ISTORIC</Text>
         <Text style={styles.title}>{bias.market}</Text>
         <Text style={styles.date}>{formatDate(bias.publishedAt)}</Text>
@@ -38,6 +42,14 @@ export default function BiasDetailScreen() {
         </View>
         <Text style={styles.sectionTitle}>Contextul notat</Text>
         <Text style={styles.body}>{bias.notes}</Text>
+        {bias.videoUrl ? <PrimaryButton label="Deschide video" onPress={() => void Linking.openURL(bias.videoUrl!)} /> : null}
+        {relatedReview ? (
+          <View style={styles.relatedCard}>
+            <Text style={styles.relatedEyebrow}>AFTER ACTION REVIEW ASOCIAT</Text>
+            <Text style={styles.relatedTitle}>{relatedReview.title}</Text>
+            <PrimaryButton label="Vezi After Action Review" variant="ghost" onPress={() => router.push(`/review/${relatedReview.id}`)} />
+          </View>
+        ) : null}
         <Text style={styles.disclaimer}>Arhivă educațională bazată pe review-ul zilnic, nu o recomandare de tranzacționare.</Text>
         <PrimaryButton label="Înapoi acasă" variant="ghost" onPress={() => router.back()} />
       </View>
@@ -54,6 +66,11 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.lg,
   },
+  image: {
+    width: "100%",
+    height: 230,
+    borderRadius: radii.md,
+  },
   eyebrow: { color: colors.gold, fontSize: typography.small, fontWeight: "800", letterSpacing: 1.2 },
   title: { color: colors.textStrong, fontSize: 30, fontWeight: "800" },
   date: { color: colors.textMuted, fontSize: typography.body },
@@ -64,4 +81,14 @@ const styles = StyleSheet.create({
   sectionTitle: { color: colors.textStrong, fontSize: typography.section, fontWeight: "800", marginTop: spacing.sm },
   body: { color: colors.textSoft, fontSize: typography.body, lineHeight: 24 },
   disclaimer: { color: colors.textMuted, fontSize: typography.small, lineHeight: 19 },
+  relatedCard: {
+    backgroundColor: colors.bgMuted,
+    borderColor: colors.borderSubtle,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    gap: spacing.sm,
+    padding: spacing.md,
+  },
+  relatedEyebrow: { color: colors.gold, fontSize: typography.small, fontWeight: "800", letterSpacing: 1 },
+  relatedTitle: { color: colors.textStrong, fontSize: typography.body, fontWeight: "800" },
 });

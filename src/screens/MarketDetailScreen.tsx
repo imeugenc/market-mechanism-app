@@ -1,4 +1,4 @@
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { type Href, router, Stack, useLocalSearchParams } from "expo-router";
 
 import { DailyVideoCard } from "@/components/DailyVideoCard";
@@ -11,6 +11,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { displayPlan } from "@/lib/display";
 import { canAccessPremiumContent, groupAnalysesByDate, groupReviewsByDate } from "@/features/content/access";
 import { formatDailyLabel } from "@/lib/format";
+import { sanitizeRemoteImageUrl } from "@/lib/media";
 import { useAppState } from "@/providers/AppProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 import { CORE_MARKETS } from "@/constants/markets";
@@ -114,6 +115,7 @@ export function MarketDetailScreen() {
         <View style={styles.biasList}>
           {marketBiases.slice(0, 8).map((bias) => (
             <Pressable key={bias.id} style={styles.biasCard} onPress={() => router.push(`/bias/${bias.id}` as Href)}>
+              {sanitizeRemoteImageUrl(bias.chartImage) ? <Image source={{ uri: sanitizeRemoteImageUrl(bias.chartImage) }} style={styles.biasImage} /> : null}
               <View style={styles.biasTopRow}>
                 <Text style={styles.biasDate}>{formatDailyLabel(bias.publishedAt)}</Text>
                 <Text style={styles.biasOutcome}>{bias.outcome}</Text>
@@ -299,6 +301,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 7,
     padding: 16,
+  },
+  biasImage: {
+    width: "100%",
+    height: 170,
+    borderRadius: radii.md,
   },
   biasTopRow: {
     alignItems: "center",

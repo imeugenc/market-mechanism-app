@@ -36,6 +36,9 @@ export interface DailyBias {
   confidence: "Low" | "Medium" | "High";
   outcome: "Correct" | "Partially correct" | "Wrong" | "Pending";
   notes: string;
+  chartImage?: string;
+  videoUrl?: string;
+  relatedReviewId?: string;
   publishedAt: string;
 }
 

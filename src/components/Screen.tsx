@@ -1,4 +1,4 @@
-import { PropsWithChildren } from "react";
+import { PropsWithChildren, RefObject } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { Platform, ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -8,9 +8,10 @@ import { colors, spacing } from "@/theme";
 type ScreenProps = PropsWithChildren<{
   scroll?: boolean;
   webMaxWidth?: number;
+  scrollRef?: RefObject<ScrollView | null>;
 }>;
 
-export function Screen({ children, scroll = true, webMaxWidth = 1120 }: ScreenProps) {
+export function Screen({ children, scroll = true, webMaxWidth = 1120, scrollRef }: ScreenProps) {
   const { width } = useWindowDimensions();
   const isCompactWeb = Platform.OS === "web" && width < 820;
 
@@ -35,7 +36,7 @@ export function Screen({ children, scroll = true, webMaxWidth = 1120 }: ScreenPr
         end={{ x: 0.9, y: 1 }}
         style={styles.gradient}
       >
-        {scroll ? <ScrollView showsVerticalScrollIndicator={false}>{content}</ScrollView> : content}
+        {scroll ? <ScrollView ref={scrollRef} showsVerticalScrollIndicator={false}>{content}</ScrollView> : content}
       </LinearGradient>
     </SafeAreaView>
   );

@@ -214,7 +214,7 @@ interface AppContextValue {
   publishAltcoinPost: (input: NewAltcoinPostInput) => void;
   updateAltcoinPost: (postId: string, input: NewAltcoinPostInput) => void;
   deleteAltcoinPost: (postId: string) => void;
-  publishReview: (input: NewReviewInput) => void;
+  publishReview: (input: NewReviewInput) => Promise<AfterActionReview | null>;
   updateReview: (reviewId: string, input: NewReviewInput) => void;
   deleteReview: (reviewId: string) => void;
   updateRequest: (requestId: string, input: RequestUpdateInput) => Promise<ActionResult>;
@@ -1297,7 +1297,7 @@ export function AppProvider({ children }: PropsWithChildren) {
         setAltcoinPostState((prev) => prev.filter((item) => item.id !== postId));
         void deleteAltcoinPost(postId);
       },
-      publishReview: (input) => {
+      publishReview: async (input) => {
         const next: AfterActionReview = {
           ...input,
           id: `review-${input.market.toLowerCase()}-${Date.now()}`,
@@ -1312,7 +1312,7 @@ export function AppProvider({ children }: PropsWithChildren) {
           body: next.title,
           premiumOnly: false,
         });
-        void publishAfterActionReview({
+        const result = await publishAfterActionReview({
           market: next.market,
           title: next.title,
           short_text: next.shortText,
@@ -1321,6 +1321,13 @@ export function AppProvider({ children }: PropsWithChildren) {
           video_url: next.videoUrl,
           published_at: next.publishedAt,
         });
+
+        if (!result.data) {
+          return null;
+        }
+
+        setReviewState((prev) => prev.map((item) => (item.id === next.id ? result.data! : item)));
+        return result.data;
       },
       updateReview: (reviewId, input) => {
         setReviewState((prev) =>

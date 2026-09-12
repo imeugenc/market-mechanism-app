@@ -1,7 +1,7 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
-import { useCallback, useState } from "react";
-import { Alert, Linking, Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 
 import { isOwnerEmail } from "@/constants/access";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
@@ -11,6 +11,7 @@ import { Screen } from "@/components/Screen";
 import { SectionHeader } from "@/components/SectionHeader";
 import { normalizeIsoDate } from "@/lib/dates";
 import { formatDate } from "@/lib/format";
+import { sanitizeRemoteImageUrl } from "@/lib/media";
 import { useAppState } from "@/providers/AppProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 import { Market, PaymentStatus, RequestStatus, UserPlan } from "@/types/domain";
@@ -83,6 +84,9 @@ export default function AdminScreen() {
   const [biasConfidence, setBiasConfidence] = useState<"Low" | "Medium" | "High">("Low");
   const [biasOutcome, setBiasOutcome] = useState<"Correct" | "Partially correct" | "Wrong" | "Pending">("Pending");
   const [biasNotes, setBiasNotes] = useState("");
+  const [biasChartImage, setBiasChartImage] = useState("");
+  const [biasVideoUrl, setBiasVideoUrl] = useState("");
+  const [biasRelatedReviewId, setBiasRelatedReviewId] = useState<string | undefined>();
   const [biasDate, setBiasDate] = useState(() => currentIsoValue());
   const [editingBiasId, setEditingBiasId] = useState<string | null>(null);
   const [personalEmail, setPersonalEmail] = useState("");
@@ -99,6 +103,7 @@ export default function AdminScreen() {
   const [reviewVideoUrl, setReviewVideoUrl] = useState("");
   const [reviewDate, setReviewDate] = useState(() => currentIsoValue());
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
+  const [reviewRelatedBiasId, setReviewRelatedBiasId] = useState<string | undefined>();
   const [altcoinSymbol, setAltcoinSymbol] = useState("");
   const [altcoinTitle, setAltcoinTitle] = useState("");
   const [altcoinSummary, setAltcoinSummary] = useState("");
@@ -128,6 +133,7 @@ export default function AdminScreen() {
     Record<string, { status: RequestStatus; paymentStatus: PaymentStatus; adminNotes: string; deliveryUrl: string }>
   >({});
   const [contactReplyDrafts, setContactReplyDrafts] = useState<Record<string, string>>({});
+  const adminScrollRef = useRef<ScrollView>(null);
   const [archiveFilters, setArchiveFilters] = useState<{
     premiumRequests: ArchiveFilter;
     personalDeliveries: ArchiveFilter;
@@ -142,6 +148,17 @@ export default function AdminScreen() {
   const filteredPaymentRequests = paymentRequests.filter((item) => matchesArchiveFilter(item.archivedAt, archiveFilters.premiumRequests));
   const filteredPersonalRequests = personalRequests.filter((item) => matchesArchiveFilter(item.archivedAt, archiveFilters.personalDeliveries));
   const filteredContactMessages = contactMessages.filter((item) => matchesArchiveFilter(item.archivedAt, archiveFilters.contactMessages));
+  const availableBiasReviews = reviews.filter((item) => item.market === biasMarket);
+  const availableReviewBiases = dailyBiases.filter((item) => item.market === market);
+
+  useEffect(() => {
+    if (activeComposer !== "bias") {
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => adminScrollRef.current?.scrollTo({ animated: true, y: 0 }));
+    return () => cancelAnimationFrame(frame);
+  }, [activeComposer]);
 
   const toggleSection = (key: keyof typeof openSections) => {
     setOpenSections((prev) => ({
@@ -253,6 +270,59 @@ export default function AdminScreen() {
     setReviewImageUrl(review.chartImage);
     setReviewVideoUrl(review.videoUrl ?? "");
     setReviewDate(review.publishedAt);
+    setReviewRelatedBiasId(dailyBiases.find((item) => item.relatedReviewId === review.id)?.id);
+  };
+
+  const updateBiasReviewLink = (biasId: string, reviewId?: string) => {
+    const bias = dailyBiases.find((item) => item.id === biasId);
+    if (!bias) {
+      return;
+    }
+
+    updateDailyBias(bias.id, {
+      market: bias.market,
+      forecastedBias: bias.forecastedBias,
+      confidence: bias.confidence,
+      outcome: bias.outcome,
+      notes: bias.notes,
+      chartImage: bias.chartImage,
+      videoUrl: bias.videoUrl,
+      relatedReviewId: reviewId,
+      publishedAt: bias.publishedAt,
+    });
+  };
+
+  const syncReviewBiasLink = (reviewId: string, nextBiasId?: string) => {
+    dailyBiases
+      .filter((item) => item.relatedReviewId === reviewId && item.id !== nextBiasId)
+      .forEach((item) => updateBiasReviewLink(item.id));
+
+    if (nextBiasId) {
+      updateBiasReviewLink(nextBiasId, reviewId);
+    }
+  };
+
+  const saveReview = async () => {
+    const input = {
+      market,
+      title: reviewTitle.trim(),
+      shortText: reviewText.trim(),
+      bodyText: reviewBodyText.trim(),
+      chartImage: reviewImageUrl.trim(),
+      videoUrl: reviewVideoUrl.trim(),
+      publishedAt: normalizeIsoDate(reviewDate),
+    };
+
+    if (editingReviewId) {
+      updateReview(editingReviewId, input);
+      syncReviewBiasLink(editingReviewId, reviewRelatedBiasId);
+      return;
+    }
+
+    const created = await publishReview(input);
+    if (created) {
+      syncReviewBiasLink(created.id, reviewRelatedBiasId);
+    }
   };
 
   const startAnalysisEdit = (analysisId: string) => {
@@ -282,6 +352,9 @@ export default function AdminScreen() {
     setBiasConfidence(bias.confidence);
     setBiasOutcome(bias.outcome);
     setBiasNotes(bias.notes);
+    setBiasChartImage(bias.chartImage ?? "");
+    setBiasVideoUrl(bias.videoUrl ?? "");
+    setBiasRelatedReviewId(bias.relatedReviewId);
     setBiasDate(bias.publishedAt);
   };
 
@@ -292,6 +365,9 @@ export default function AdminScreen() {
     setBiasConfidence("Low");
     setBiasOutcome("Pending");
     setBiasNotes("");
+    setBiasChartImage("");
+    setBiasVideoUrl("");
+    setBiasRelatedReviewId(undefined);
     setBiasDate(currentIsoValue());
   };
 
@@ -371,7 +447,7 @@ export default function AdminScreen() {
   }
 
   return (
-    <Screen webMaxWidth={1320}>
+    <Screen webMaxWidth={1320} scrollRef={adminScrollRef}>
       <PremiumCard>
         <View style={styles.actionButtons}>
           <PrimaryButton label="Înapoi în aplicație" variant="ghost" onPress={() => router.replace("/(tabs)")} />
@@ -450,6 +526,43 @@ export default function AdminScreen() {
             <Text style={styles.label}>Context</Text>
             <TextInput value={biasNotes} onChangeText={setBiasNotes} style={[styles.input, styles.notes]} placeholder="Contextul și condițiile acestui bias" placeholderTextColor="#6F6A5C" multiline />
 
+            <Text style={styles.label}>Screenshot TradingView</Text>
+            <TextInput
+              value={biasChartImage}
+              onChangeText={setBiasChartImage}
+              style={styles.input}
+              placeholder="https://... imagine chart"
+              placeholderTextColor="#6F6A5C"
+              autoCapitalize="none"
+            />
+            {sanitizeRemoteImageUrl(biasChartImage) ? (
+              <Image source={{ uri: sanitizeRemoteImageUrl(biasChartImage) }} style={styles.biasImagePreview} />
+            ) : null}
+
+            <Text style={styles.label}>URL video opțional</Text>
+            <TextInput
+              value={biasVideoUrl}
+              onChangeText={setBiasVideoUrl}
+              style={styles.input}
+              placeholder="https://... video"
+              placeholderTextColor="#6F6A5C"
+              autoCapitalize="none"
+            />
+
+            <Text style={styles.label}>After Action Review asociat</Text>
+            <View style={styles.statusSelector}>
+              <PrimaryButton label="Fără AAR" variant={!biasRelatedReviewId ? "gold" : "ghost"} onPress={() => setBiasRelatedReviewId(undefined)} />
+              {availableBiasReviews.map((review) => (
+                <PrimaryButton
+                  key={review.id}
+                  label={review.title || `${review.market} AAR`}
+                  variant={biasRelatedReviewId === review.id ? "gold" : "ghost"}
+                  onPress={() => setBiasRelatedReviewId(review.id)}
+                />
+              ))}
+            </View>
+            {!availableBiasReviews.length ? <Text style={styles.helperText}>Publică mai întâi un AAR pentru {biasMarket}, apoi îl poți conecta aici.</Text> : null}
+
             <Text style={styles.label}>Dată publicare</Text>
             <TextInput value={biasDate} onChangeText={setBiasDate} style={styles.input} placeholderTextColor="#6F6A5C" />
 
@@ -462,6 +575,9 @@ export default function AdminScreen() {
                   confidence: biasConfidence,
                   outcome: biasOutcome,
                   notes: biasNotes.trim(),
+                  chartImage: sanitizeRemoteImageUrl(biasChartImage),
+                  videoUrl: biasVideoUrl.trim(),
+                  relatedReviewId: biasRelatedReviewId,
                   publishedAt: normalizeIsoDate(biasDate),
                 };
 
@@ -730,29 +846,23 @@ export default function AdminScreen() {
         <Text style={styles.label}>Dată publicare</Text>
         <TextInput value={reviewDate} onChangeText={setReviewDate} style={styles.input} placeholderTextColor="#6F6A5C" />
 
+        <Text style={styles.label}>Daily Bias asociat</Text>
+        <View style={styles.statusSelector}>
+          <PrimaryButton label="Fără Daily Bias" variant={!reviewRelatedBiasId ? "gold" : "ghost"} onPress={() => setReviewRelatedBiasId(undefined)} />
+          {availableReviewBiases.map((bias) => (
+            <PrimaryButton
+              key={bias.id}
+              label={`${bias.market} · ${formatDate(bias.publishedAt)}`}
+              variant={reviewRelatedBiasId === bias.id ? "gold" : "ghost"}
+              onPress={() => setReviewRelatedBiasId(bias.id)}
+            />
+          ))}
+        </View>
+        {!availableReviewBiases.length ? <Text style={styles.helperText}>Nu există încă Daily Bias pentru {market}.</Text> : null}
+
         <PrimaryButton
           label={editingReviewId ? "Salvează review-ul" : "Publică review-ul"}
-          onPress={() =>
-            editingReviewId
-              ? updateReview(editingReviewId, {
-                  market,
-                  title: reviewTitle,
-                  shortText: reviewText,
-                  bodyText: reviewBodyText,
-                  chartImage: reviewImageUrl,
-                  videoUrl: reviewVideoUrl,
-                  publishedAt: normalizeIsoDate(reviewDate),
-                })
-              : publishReview({
-                  market,
-                  title: reviewTitle,
-                  shortText: reviewText,
-                  bodyText: reviewBodyText,
-                  chartImage: reviewImageUrl,
-                  videoUrl: reviewVideoUrl,
-                  publishedAt: normalizeIsoDate(reviewDate),
-                })
-          }
+          onPress={() => void saveReview()}
         />
         {editingReviewId ? (
           <PrimaryButton
@@ -766,6 +876,7 @@ export default function AdminScreen() {
               setReviewImageUrl("");
               setReviewVideoUrl("");
               setReviewDate(currentIsoValue());
+              setReviewRelatedBiasId(undefined);
             }}
           />
         ) : null}
@@ -877,8 +988,16 @@ export default function AdminScreen() {
                 <>
                   <Text style={styles.itemMeta}>{formatDate(bias.publishedAt)} • {bias.confidence} • {bias.outcome}</Text>
                   <Text style={styles.requestNotes}>{bias.notes}</Text>
+                  {bias.relatedReviewId ? <Text style={styles.helperText}>AAR conectat: {reviews.find((item) => item.id === bias.relatedReviewId)?.title ?? "Review indisponibil"}</Text> : null}
                   <View style={styles.actionButtons}>
-                    <PrimaryButton label="Editează" variant="ghost" onPress={() => { startBiasEdit(bias.id); setActiveComposer("bias"); }} />
+                    <PrimaryButton
+                      label="Editează"
+                      variant="ghost"
+                      onPress={() => {
+                        startBiasEdit(bias.id);
+                        setActiveComposer("bias");
+                      }}
+                    />
                     <PrimaryButton label="Șterge" variant="ghost" onPress={() => deleteDailyBias(bias.id)} />
                   </View>
                 </>
@@ -1597,6 +1716,19 @@ const styles = StyleSheet.create({
   notes: {
     minHeight: 120,
     textAlignVertical: "top",
+  },
+  biasImagePreview: {
+    width: "100%",
+    height: 220,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.bgMuted,
+  },
+  helperText: {
+    color: colors.textMuted,
+    fontSize: typography.small,
+    lineHeight: 19,
   },
   switchRow: {
     flexDirection: "row",

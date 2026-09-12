@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Linking, StyleSheet, Text, TextInput, View } from "react-native";
-import { router, Stack, useLocalSearchParams } from "expo-router";
+import { type Href, router, Stack, useLocalSearchParams } from "expo-router";
 
 import { PremiumCard } from "@/components/PremiumCard";
 import { PrimaryButton } from "@/components/PrimaryButton";
@@ -15,8 +15,9 @@ import { ContentComment } from "@/types/domain";
 
 export default function ReviewDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { session, user, reviews } = useAppState();
+  const { dailyBiases, session, user, reviews } = useAppState();
   const review = reviews.find((item) => item.id === id);
+  const relatedBias = dailyBiases.find((item) => item.relatedReviewId === id);
   const chartImage = sanitizeRemoteImageUrl(review?.chartImage);
   const [comments, setComments] = useState<ContentComment[]>([]);
   const [commentBody, setCommentBody] = useState("");
@@ -92,6 +93,13 @@ export default function ReviewDetailScreen() {
         <Text style={styles.title}>{review.title}</Text>
         <Text style={styles.body}>{review.bodyText ?? review.shortText}</Text>
         {review.videoUrl ? <PrimaryButton label="Deschide video" onPress={() => void Linking.openURL(review.videoUrl!)} /> : null}
+        {relatedBias ? (
+          <View style={styles.relatedCard}>
+            <Text style={styles.relatedEyebrow}>DAILY BIAS ASOCIAT</Text>
+            <Text style={styles.relatedTitle}>{relatedBias.market} · {relatedBias.forecastedBias} · {relatedBias.confidence} confidence</Text>
+            <PrimaryButton label="Vezi Daily Bias" variant="ghost" onPress={() => router.push(`/bias/${relatedBias.id}` as Href)} />
+          </View>
+        ) : null}
         <View style={styles.commentsCard}>
           <Text style={styles.commentsTitle}>Comentarii</Text>
           <TextInput
@@ -176,6 +184,17 @@ const styles = StyleSheet.create({
     fontSize: typography.small,
     fontWeight: "700",
   },
+  relatedCard: {
+    backgroundColor: colors.bgMuted,
+    borderColor: colors.borderSubtle,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    gap: spacing.sm,
+    marginHorizontal: spacing.md,
+    padding: spacing.md,
+  },
+  relatedEyebrow: { color: colors.gold, fontSize: typography.small, fontWeight: "800", letterSpacing: 1 },
+  relatedTitle: { color: colors.textStrong, fontSize: typography.body, fontWeight: "800" },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",

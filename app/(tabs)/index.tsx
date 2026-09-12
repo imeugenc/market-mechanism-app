@@ -1,7 +1,7 @@
 import { type Href, router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { BrandLockup } from "@/components/BrandLockup";
 import { ContentPreviewCard } from "@/components/ContentPreviewCard";
@@ -16,6 +16,7 @@ import { CORE_MARKETS } from "@/constants/markets";
 import { groupReviewsByDate, isPremiumLocked, latestAnalysisByMarket } from "@/features/content/access";
 import { displayPlan, displayRank } from "@/lib/display";
 import { formatDailyLabel } from "@/lib/format";
+import { sanitizeRemoteImageUrl } from "@/lib/media";
 import { useAppState } from "@/providers/AppProvider";
 import { colors, spacing, typography } from "@/theme";
 
@@ -146,6 +147,7 @@ export default function HomeScreen() {
             style={styles.biasCard}
             onPress={() => router.push(`/bias/${bias.id}` as Href)}
           >
+            {sanitizeRemoteImageUrl(bias.chartImage) ? <Image source={{ uri: sanitizeRemoteImageUrl(bias.chartImage) }} style={styles.biasImage} /> : null}
             <View style={styles.biasTopRow}>
               <Text style={styles.biasMarket}>{bias.market}</Text>
               <Text style={styles.biasOutcome}>{bias.outcome}</Text>
@@ -286,6 +288,7 @@ const styles = StyleSheet.create({
     gap: 7,
     padding: 15,
   },
+  biasImage: { width: "100%", height: 165, borderRadius: 12 },
   biasTopRow: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", gap: 10 },
   biasMarket: { color: colors.gold, fontSize: typography.small, fontWeight: "800", letterSpacing: 1 },
   biasOutcome: { color: colors.success, fontSize: typography.small, fontWeight: "800" },
