@@ -17,6 +17,7 @@ export default function ReviewDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session, user, reviews } = useAppState();
   const review = reviews.find((item) => item.id === id);
+  const chartImage = sanitizeRemoteImageUrl(review?.chartImage);
   const [comments, setComments] = useState<ContentComment[]>([]);
   const [commentBody, setCommentBody] = useState("");
   const [commentError, setCommentError] = useState("");
@@ -77,7 +78,13 @@ export default function ReviewDetailScreen() {
       <Stack.Screen options={{ title: "After Action Review", headerBackTitle: "", headerBackButtonDisplayMode: "minimal" }} />
       <PrimaryButton label="Înapoi" variant="ghost" onPress={() => router.back()} />
       <View style={styles.card}>
-        <Image source={{ uri: sanitizeRemoteImageUrl(review.chartImage) }} style={styles.image} />
+        {chartImage ? (
+          <Image source={{ uri: chartImage }} style={styles.image} />
+        ) : (
+          <View style={styles.previewUnavailable}>
+            <Text style={styles.previewUnavailableText}>Preview chart indisponibil</Text>
+          </View>
+        )}
         <View style={styles.header}>
           <Text style={styles.market}>{review.market}</Text>
           <Text style={styles.date}>{formatDate(review.publishedAt)}</Text>
@@ -156,6 +163,18 @@ const styles = StyleSheet.create({
   image: {
     width: "100%",
     height: 220,
+  },
+  previewUnavailable: {
+    alignItems: "center",
+    backgroundColor: colors.bgMuted,
+    height: 220,
+    justifyContent: "center",
+    padding: spacing.md,
+  },
+  previewUnavailableText: {
+    color: colors.textMuted,
+    fontSize: typography.small,
+    fontWeight: "700",
   },
   header: {
     flexDirection: "row",

@@ -1,11 +1,8 @@
-const FALLBACK_REVIEW_IMAGE =
-  "https://images.unsplash.com/photo-1559526324-593bc073d938?auto=format&fit=crop&w=1200&q=80";
-
-export function sanitizeRemoteImageUrl(value?: string | null, fallback = FALLBACK_REVIEW_IMAGE) {
+export function sanitizeRemoteImageUrl(value?: string | null) {
   const trimmed = value?.trim();
 
   if (!trimmed) {
-    return fallback;
+    return "";
   }
 
   if (/^https?:\/\//i.test(trimmed)) {
@@ -20,5 +17,5 @@ export function sanitizeRemoteImageUrl(value?: string | null, fallback = FALLBAC
     }
   }
 
-  return fallback;
+  return "";
 }

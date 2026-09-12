@@ -3,7 +3,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Session } from "@supabase/supabase-js";
 import { AppState, Platform } from "react-native";
 
-import { dailyAnalyses, demoMembership, demoUser, requestHistory, reviews } from "@/data/seed";
 import { isOwnerEmail, OWNER_EMAIL } from "@/constants/access";
 import { deleteDailyAnalysis, fetchDailyAnalyses, publishDailyAnalysis, updateDailyAnalysis } from "@/features/content/analyses";
 import { deleteAltcoinPost, fetchAltcoinPosts, publishAltcoinPost, updateAltcoinPost } from "@/features/content/altcoins";
@@ -182,7 +181,6 @@ interface AppContextValue {
   notifications: InAppNotification[];
   setAuthEmail: (value: string) => void;
   setAuthPassword: (value: string) => void;
-  signInAsDemo: () => void;
   signInWithPassword: (email?: string, password?: string) => Promise<AuthActionResult>;
   signUpWithPassword: (email?: string, password?: string) => Promise<AuthActionResult>;
   requestMagicLink: (email?: string) => Promise<void>;
@@ -223,13 +221,13 @@ interface AppContextValue {
 const ONBOARDING_STORAGE_KEY = "execution-edge:onboarding-complete";
 const IS_STATIC_WEB_RENDER = Platform.OS === "web" && typeof window === "undefined";
 const baseStats = {
-  userId: demoMembership.userId,
-  currentPlan: demoMembership.currentPlan,
-  loginStreak: demoMembership.loginStreak,
-  totalViews: demoMembership.totalViews,
-  premiumViews: demoMembership.premiumViews,
-  totalRequests: demoMembership.totalRequests,
-  engagementActions: demoMembership.engagementActions,
+  userId: "",
+  currentPlan: "FREE" as UserPlan,
+  loginStreak: 0,
+  totalViews: 0,
+  premiumViews: 0,
+  totalRequests: 0,
+  engagementActions: 0,
 };
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -251,17 +249,17 @@ export function AppProvider({ children }: PropsWithChildren) {
   const [authMessage, setAuthMessage] = useState(
     "Autentifică-te cu email și parolă sau creează un cont nou pentru acces complet.",
   );
-  const [currentPlan, setCurrentPlan] = useState<UserPlan>(demoMembership.currentPlan);
+  const [currentPlan, setCurrentPlan] = useState<UserPlan>("FREE");
   const [stats, setStats] = useState(
     applyRank({
       ...baseStats,
-      currentPlan: demoMembership.currentPlan,
+      currentPlan: "FREE",
     }),
   );
-  const [analysisState, setAnalysisState] = useState<DailyAnalysis[]>(dailyAnalyses);
+  const [analysisState, setAnalysisState] = useState<DailyAnalysis[]>([]);
   const [altcoinPostState, setAltcoinPostState] = useState<AltcoinPost[]>([]);
-  const [reviewState, setReviewState] = useState<AfterActionReview[]>(reviews);
-  const [requestState, setRequestState] = useState<AnalysisRequest[]>(requestHistory);
+  const [reviewState, setReviewState] = useState<AfterActionReview[]>([]);
+  const [requestState, setRequestState] = useState<AnalysisRequest[]>([]);
   const [paymentRequestState, setPaymentRequestState] = useState<PaymentRequest[]>([]);
   const [personalRequestState, setPersonalRequestState] = useState<PersonalRequest[]>([]);
   const [adminUserState, setAdminUserState] = useState<AdminUserRecord[]>([]);
@@ -395,11 +393,11 @@ export function AppProvider({ children }: PropsWithChildren) {
         fetchAltcoinPosts(),
       ]);
 
-      if (!analysesResult.error && analysesResult.data?.length) {
+      if (!analysesResult.error && analysesResult.data) {
         setAnalysisState(analysesResult.data);
       }
 
-      if (!reviewsResult.error && reviewsResult.data?.length) {
+      if (!reviewsResult.error && reviewsResult.data) {
         setReviewState(reviewsResult.data);
       }
 
@@ -605,10 +603,6 @@ export function AppProvider({ children }: PropsWithChildren) {
       notifications,
       setAuthEmail,
       setAuthPassword,
-      signInAsDemo: () => {
-        setSession(null);
-        setUser(demoUser);
-      },
       signInWithPassword: async (emailInput, passwordInput) => {
         const email = (emailInput ?? authEmail).trim();
         const password = passwordInput ?? authPassword;

@@ -69,9 +69,9 @@ export default function AdminScreen() {
     archiveContactMessage,
   } = useAppState();
   const [market, setMarket] = useState<Market>("BTC");
-  const [title, setTitle] = useState("Briefing sesiune principală");
-  const [summary, setSummary] = useState("Contextul principal al zilei, publicat pentru briefingul video.");
-  const [videoUrl, setVideoUrl] = useState("https://example.com/video/new-upload");
+  const [title, setTitle] = useState("");
+  const [summary, setSummary] = useState("");
+  const [videoUrl, setVideoUrl] = useState("");
   const [publishDate, setPublishDate] = useState(() => currentIsoValue());
   const [editingAnalysisId, setEditingAnalysisId] = useState<string | null>(null);
   const [personalEmail, setPersonalEmail] = useState("");
@@ -81,19 +81,17 @@ export default function AdminScreen() {
   const [personalTier, setPersonalTier] = useState<2 | 5 | 10>(5);
   const [personalStatus, setPersonalStatus] = useState<RequestStatus>("pending");
   const [editingPersonalId, setEditingPersonalId] = useState<string | null>(null);
-  const [reviewTitle, setReviewTitle] = useState("Review după mișcare");
-  const [reviewText, setReviewText] = useState("Explicație scurtă despre ce s-a întâmplat în sesiune.");
-  const [reviewBodyText, setReviewBodyText] = useState("Detaliază aici contextul complet pentru After Action Review.");
-  const [reviewImageUrl, setReviewImageUrl] = useState(
-    "https://images.unsplash.com/photo-1559526324-593bc073d938?auto=format&fit=crop&w=1200&q=80",
-  );
+  const [reviewTitle, setReviewTitle] = useState("");
+  const [reviewText, setReviewText] = useState("");
+  const [reviewBodyText, setReviewBodyText] = useState("");
+  const [reviewImageUrl, setReviewImageUrl] = useState("");
   const [reviewVideoUrl, setReviewVideoUrl] = useState("");
   const [reviewDate, setReviewDate] = useState(() => currentIsoValue());
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
-  const [altcoinSymbol, setAltcoinSymbol] = useState("SOL");
-  const [altcoinTitle, setAltcoinTitle] = useState("Update oportunistic pe altcoin");
-  const [altcoinSummary, setAltcoinSummary] = useState("Context scurt pentru un setup punctual din secțiunea Altcoins.");
-  const [altcoinBody, setAltcoinBody] = useState("Explică aici ideea principală, nivelurile și contextul pentru postarea Altcoins.");
+  const [altcoinSymbol, setAltcoinSymbol] = useState("");
+  const [altcoinTitle, setAltcoinTitle] = useState("");
+  const [altcoinSummary, setAltcoinSummary] = useState("");
+  const [altcoinBody, setAltcoinBody] = useState("");
   const [altcoinVideoUrl, setAltcoinVideoUrl] = useState("");
   const [altcoinPublishDate, setAltcoinPublishDate] = useState(() => currentIsoValue());
   const [altcoinPremium, setAltcoinPremium] = useState(false);
@@ -568,9 +566,9 @@ export default function AdminScreen() {
             variant="ghost"
             onPress={() => {
               setEditingAnalysisId(null);
-              setTitle("Briefing sesiune principală");
-              setSummary("Contextul principal al zilei, publicat pentru briefingul video.");
-              setVideoUrl("https://example.com/video/new-upload");
+              setTitle("");
+              setSummary("");
+              setVideoUrl("");
               setPublishDate(currentIsoValue());
               setIsPremium(true);
             }}
@@ -656,9 +654,10 @@ export default function AdminScreen() {
             variant="ghost"
             onPress={() => {
               setEditingReviewId(null);
-              setReviewTitle("Review după mișcare");
-              setReviewText("Explicație scurtă despre ce s-a întâmplat în sesiune.");
-              setReviewBodyText("Detaliază aici contextul complet pentru After Action Review.");
+              setReviewTitle("");
+              setReviewText("");
+              setReviewBodyText("");
+              setReviewImageUrl("");
               setReviewVideoUrl("");
               setReviewDate(currentIsoValue());
             }}
@@ -739,10 +738,10 @@ export default function AdminScreen() {
             variant="ghost"
             onPress={() => {
               setEditingAltcoinId(null);
-              setAltcoinSymbol("SOL");
-              setAltcoinTitle("Update oportunistic pe altcoin");
-              setAltcoinSummary("Context scurt pentru un setup punctual din secțiunea Altcoins.");
-              setAltcoinBody("Explică aici ideea principală, nivelurile și contextul pentru postarea Altcoins.");
+              setAltcoinSymbol("");
+              setAltcoinTitle("");
+              setAltcoinSummary("");
+              setAltcoinBody("");
               setAltcoinVideoUrl("");
               setAltcoinPublishDate(currentIsoValue());
               setAltcoinPremium(false);

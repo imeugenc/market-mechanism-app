@@ -16,9 +16,17 @@ export function ReviewCard({
   favorited?: boolean;
   onToggleFavorite?: () => void;
 }) {
+  const chartImage = sanitizeRemoteImageUrl(item.chartImage);
+
   return (
     <Pressable style={styles.card} onPress={() => router.push(`/review/${item.id}`)}>
-      <Image source={{ uri: sanitizeRemoteImageUrl(item.chartImage) }} style={styles.image} />
+      {chartImage ? (
+        <Image source={{ uri: chartImage }} style={styles.image} />
+      ) : (
+        <View style={styles.previewUnavailable}>
+          <Text style={styles.previewUnavailableText}>Preview chart indisponibil</Text>
+        </View>
+      )}
       <View style={styles.headerRow}>
         <Text style={styles.market}>{item.market}</Text>
         <View style={styles.headerActions}>
@@ -62,6 +70,18 @@ const styles = StyleSheet.create({
   image: {
     width: "100%",
     height: 174,
+  },
+  previewUnavailable: {
+    alignItems: "center",
+    backgroundColor: colors.bgMuted,
+    height: 174,
+    justifyContent: "center",
+    padding: 16,
+  },
+  previewUnavailableText: {
+    color: colors.textMuted,
+    fontSize: typography.small,
+    fontWeight: "700",
   },
   headerRow: {
     flexDirection: "row",

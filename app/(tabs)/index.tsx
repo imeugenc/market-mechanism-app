@@ -1,7 +1,7 @@
-import { router } from "expo-router";
+import { type Href, router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { BrandLockup } from "@/components/BrandLockup";
 import { ContentPreviewCard } from "@/components/ContentPreviewCard";
@@ -13,6 +13,7 @@ import { ReviewCard } from "@/components/ReviewCard";
 import { Screen } from "@/components/Screen";
 import { SectionHeader } from "@/components/SectionHeader";
 import { CORE_MARKETS } from "@/constants/markets";
+import { recentBiases, recentBiasProcessNote } from "@/data/recent-biases";
 import { groupReviewsByDate, isPremiumLocked, latestAnalysisByMarket } from "@/features/content/access";
 import { displayPlan, displayRank } from "@/lib/display";
 import { formatDailyLabel } from "@/lib/format";
@@ -117,6 +118,33 @@ export default function HomeScreen() {
           ) : null}
         </View>
       </PremiumCard>
+
+      <SectionHeader
+        eyebrow="ARHIVĂ REALĂ"
+        title="Ultimele Daily Bias-uri"
+        caption="O selecție din ultimele review-uri: piață, bias, nivel de încredere și rezultat. Apasă un card pentru contextul complet notat în jurnal."
+      />
+      <View style={styles.biasProcessCard}>
+        <Text style={styles.biasProcessTitle}>Observație de proces</Text>
+        <Text style={styles.biasProcessBody}>{recentBiasProcessNote}</Text>
+      </View>
+      <View style={styles.biasList}>
+        {recentBiases.slice(0, 5).map((bias) => (
+          <Pressable
+            key={bias.id}
+            style={styles.biasCard}
+            onPress={() => router.push(`/bias/${bias.id}` as Href)}
+          >
+            <View style={styles.biasTopRow}>
+              <Text style={styles.biasMarket}>{bias.market}</Text>
+              <Text style={styles.biasOutcome}>{bias.outcome}</Text>
+            </View>
+            <Text style={styles.biasTitle}>{bias.forecastedBias} · {bias.confidence} confidence</Text>
+            <Text style={styles.biasPreview} numberOfLines={2}>{bias.notes}</Text>
+            <Text style={styles.biasDate}>{formatDailyLabel(bias.publishedAt)} · Vezi contextul</Text>
+          </Pressable>
+        ))}
+      </View>
 
       <SectionHeader
         eyebrow="ACCES GRATUIT"
@@ -231,6 +259,37 @@ const styles = StyleSheet.create({
     fontSize: typography.body,
     lineHeight: 22,
   },
+  biasProcessCard: {
+    backgroundColor: colors.bgMuted,
+    borderColor: colors.borderSubtle,
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 8,
+    padding: 16,
+  },
+  biasProcessTitle: {
+    color: colors.goldBright,
+    fontSize: typography.small,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
+  biasProcessBody: { color: colors.textSoft, fontSize: typography.body, lineHeight: 22 },
+  biasList: { gap: 10 },
+  biasCard: {
+    backgroundColor: colors.bgGlass,
+    borderColor: colors.border,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 7,
+    padding: 15,
+  },
+  biasTopRow: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", gap: 10 },
+  biasMarket: { color: colors.gold, fontSize: typography.small, fontWeight: "800", letterSpacing: 1 },
+  biasOutcome: { color: colors.success, fontSize: typography.small, fontWeight: "800" },
+  biasTitle: { color: colors.textStrong, fontSize: typography.body, fontWeight: "800" },
+  biasPreview: { color: colors.textMuted, fontSize: typography.small, lineHeight: 19 },
+  biasDate: { color: colors.goldBright, fontSize: typography.small, fontWeight: "700" },
   heroStrip: {
     flexDirection: "row",
     flexWrap: "wrap",
