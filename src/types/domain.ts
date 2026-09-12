@@ -29,6 +29,16 @@ export interface DailyAnalysis {
   status?: "Live" | "Plan" | "Watch";
 }
 
+export interface DailyBias {
+  id: string;
+  market: Market;
+  forecastedBias: "Bullish" | "Bearish" | "Neutral" | "Range";
+  confidence: "Low" | "Medium" | "High";
+  outcome: "Correct" | "Partially correct" | "Wrong" | "Pending";
+  notes: string;
+  publishedAt: string;
+}
+
 export interface AfterActionReview {
   id: string;
   market: Market;

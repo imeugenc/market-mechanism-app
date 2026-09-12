@@ -1,5 +1,5 @@
-import { Alert, StyleSheet, Text, View } from "react-native";
-import { router, Stack, useLocalSearchParams } from "expo-router";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { type Href, router, Stack, useLocalSearchParams } from "expo-router";
 
 import { DailyVideoCard } from "@/components/DailyVideoCard";
 import { MetricPill } from "@/components/MetricPill";
@@ -18,7 +18,7 @@ import { Market } from "@/types/domain";
 
 export function MarketDetailScreen() {
   const { market } = useLocalSearchParams<{ market?: string }>();
-  const { analyses, favorites, membership, reviews, toggleFavorite, trackView } = useAppState();
+  const { analyses, dailyBiases, favorites, membership, reviews, toggleFavorite, trackView } = useAppState();
   const normalizedMarket = (market ?? "").trim().toUpperCase() as Market;
   const isValidMarket = CORE_MARKETS.includes(normalizedMarket);
 
@@ -41,11 +41,14 @@ export function MarketDetailScreen() {
     .filter((item) => item.market === normalizedMarket)
     .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
   const marketReviews = reviews.filter((item) => item.market === normalizedMarket);
+  const marketBiases = dailyBiases
+    .filter((item) => item.market === normalizedMarket)
+    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
   const reviewGroups = groupReviewsByDate(marketReviews);
   const grouped = groupAnalysesByDate(marketAnalyses);
   const latest = marketAnalyses[0];
 
-  if (!latest && !marketReviews.length) {
+  if (!latest && !marketReviews.length && !marketBiases.length) {
     return (
       <Screen>
         <Stack.Screen
@@ -101,6 +104,31 @@ export function MarketDetailScreen() {
           <PrimaryButton label="Solicită analiză" variant="ghost" onPress={() => router.push("/(tabs)/requests")} />
         </View>
       </PremiumCard>
+
+      <SectionHeader
+        eyebrow="Daily Bias"
+        title={`Contextul zilei • ${normalizedMarket}`}
+        caption="Istoricul este separat pe piață. Deschide fiecare intrare pentru contextul complet și rezultatul review-ului."
+      />
+      {marketBiases.length ? (
+        <View style={styles.biasList}>
+          {marketBiases.slice(0, 8).map((bias) => (
+            <Pressable key={bias.id} style={styles.biasCard} onPress={() => router.push(`/bias/${bias.id}` as Href)}>
+              <View style={styles.biasTopRow}>
+                <Text style={styles.biasDate}>{formatDailyLabel(bias.publishedAt)}</Text>
+                <Text style={styles.biasOutcome}>{bias.outcome}</Text>
+              </View>
+              <Text style={styles.biasTitle}>{bias.forecastedBias} · {bias.confidence} confidence</Text>
+              <Text style={styles.biasNotes} numberOfLines={2}>{bias.notes}</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : (
+        <View style={styles.infoCard}>
+          <Text style={styles.infoTitle}>Nu există încă Daily Bias pentru {normalizedMarket}</Text>
+          <Text style={styles.infoBody}>Când publici un bias pentru această piață din Consola Creator, acesta apare aici automat.</Text>
+        </View>
+      )}
 
       <SectionHeader
         eyebrow="GRATUIT"
@@ -260,6 +288,43 @@ const styles = StyleSheet.create({
   },
   actions: {
     gap: spacing.sm,
+  },
+  biasList: {
+    gap: spacing.sm,
+  },
+  biasCard: {
+    backgroundColor: colors.bgGlass,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    gap: 7,
+    padding: 16,
+  },
+  biasTopRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+  },
+  biasDate: {
+    color: colors.gold,
+    fontSize: typography.small,
+    fontWeight: "800",
+  },
+  biasOutcome: {
+    color: colors.success,
+    fontSize: typography.small,
+    fontWeight: "800",
+  },
+  biasTitle: {
+    color: colors.textStrong,
+    fontSize: typography.body,
+    fontWeight: "800",
+  },
+  biasNotes: {
+    color: colors.textMuted,
+    fontSize: typography.small,
+    lineHeight: 19,
   },
   dayBlock: {
     borderRadius: radii.xl,

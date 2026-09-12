@@ -41,16 +41,20 @@ export default function AdminScreen() {
     analyses,
     contactMessages,
     deleteAnalysis,
+    deleteDailyBias,
     createPersonalRequest,
+    dailyBiases,
     markUserAsPremium,
     paymentRequests,
     personalRequests,
     publishAnalysis,
+    publishDailyBias,
     publishAltcoinPost,
     publishReview,
     requests,
     reviews,
     updateAnalysis,
+    updateDailyBias,
     updateAltcoinPost,
     updateAdminUser,
     updateContactMessageStatus,
@@ -74,6 +78,13 @@ export default function AdminScreen() {
   const [videoUrl, setVideoUrl] = useState("");
   const [publishDate, setPublishDate] = useState(() => currentIsoValue());
   const [editingAnalysisId, setEditingAnalysisId] = useState<string | null>(null);
+  const [biasMarket, setBiasMarket] = useState<Market>("NQ");
+  const [biasForecasted, setBiasForecasted] = useState<"Bullish" | "Bearish" | "Neutral" | "Range">("Neutral");
+  const [biasConfidence, setBiasConfidence] = useState<"Low" | "Medium" | "High">("Low");
+  const [biasOutcome, setBiasOutcome] = useState<"Correct" | "Partially correct" | "Wrong" | "Pending">("Pending");
+  const [biasNotes, setBiasNotes] = useState("");
+  const [biasDate, setBiasDate] = useState(() => currentIsoValue());
+  const [editingBiasId, setEditingBiasId] = useState<string | null>(null);
   const [personalEmail, setPersonalEmail] = useState("");
   const [personalTitle, setPersonalTitle] = useState("Analiză personală");
   const [personalVideoUrl, setPersonalVideoUrl] = useState("");
@@ -99,7 +110,7 @@ export default function AdminScreen() {
   const [isPremium, setIsPremium] = useState(true);
   const [premiumUserId, setPremiumUserId] = useState("");
   const [premiumDurationDays, setPremiumDurationDays] = useState<30 | 90>(30);
-  const [activeComposer, setActiveComposer] = useState<"aar" | "briefing" | "altcoins" | "private" | null>(null);
+  const [activeComposer, setActiveComposer] = useState<"aar" | "bias" | "briefing" | "altcoins" | "private" | null>(null);
   const [expandedPremiumRequests, setExpandedPremiumRequests] = useState<Record<string, boolean>>({});
   const [expandedAnalysisRequests, setExpandedAnalysisRequests] = useState<Record<string, boolean>>({});
   const [expandedMembers, setExpandedMembers] = useState<Record<string, boolean>>({});
@@ -259,6 +270,31 @@ export default function AdminScreen() {
     setIsPremium(analysis.isPremium);
   };
 
+  const startBiasEdit = (biasId: string) => {
+    const bias = dailyBiases.find((item) => item.id === biasId);
+    if (!bias) {
+      return;
+    }
+
+    setEditingBiasId(bias.id);
+    setBiasMarket(bias.market);
+    setBiasForecasted(bias.forecastedBias);
+    setBiasConfidence(bias.confidence);
+    setBiasOutcome(bias.outcome);
+    setBiasNotes(bias.notes);
+    setBiasDate(bias.publishedAt);
+  };
+
+  const resetBiasComposer = () => {
+    setEditingBiasId(null);
+    setBiasMarket("NQ");
+    setBiasForecasted("Neutral");
+    setBiasConfidence("Low");
+    setBiasOutcome("Pending");
+    setBiasNotes("");
+    setBiasDate(currentIsoValue());
+  };
+
   const startPersonalEdit = (requestId: string) => {
     const request = personalRequests.find((item) => item.id === requestId);
     if (!request) {
@@ -358,6 +394,11 @@ export default function AdminScreen() {
           onPress={() => setActiveComposer((prev) => (prev === "aar" ? null : "aar"))}
         />
         <PrimaryButton
+          label="Daily Bias"
+          variant={activeComposer === "bias" ? "gold" : "ghost"}
+          onPress={() => setActiveComposer((prev) => (prev === "bias" ? null : "bias"))}
+        />
+        <PrimaryButton
           label="Publică Briefing"
           variant={activeComposer === "briefing" ? "gold" : "ghost"}
           onPress={() => setActiveComposer((prev) => (prev === "briefing" ? null : "briefing"))}
@@ -373,6 +414,71 @@ export default function AdminScreen() {
           onPress={() => setActiveComposer((prev) => (prev === "private" ? null : "private"))}
         />
       </View>
+
+      {activeComposer === "bias" ? (
+        <>
+          <SectionHeader eyebrow="Daily Bias" title="Publică și editează bias-uri pe piață" />
+          <View style={styles.form}>
+            <Text style={styles.label}>Piață</Text>
+            <View style={styles.toggleRow}>
+              {(["BTC", "ETH", "NQ", "ES"] as Market[]).map((value) => (
+                <PrimaryButton key={`bias-${value}`} label={value} onPress={() => setBiasMarket(value)} variant={biasMarket === value ? "gold" : "ghost"} />
+              ))}
+            </View>
+
+            <Text style={styles.label}>Bias</Text>
+            <View style={styles.statusSelector}>
+              {(["Bullish", "Bearish", "Neutral", "Range"] as const).map((value) => (
+                <PrimaryButton key={value} label={value} onPress={() => setBiasForecasted(value)} variant={biasForecasted === value ? "gold" : "ghost"} />
+              ))}
+            </View>
+
+            <Text style={styles.label}>Încredere</Text>
+            <View style={styles.statusSelector}>
+              {(["Low", "Medium", "High"] as const).map((value) => (
+                <PrimaryButton key={value} label={value} onPress={() => setBiasConfidence(value)} variant={biasConfidence === value ? "gold" : "ghost"} />
+              ))}
+            </View>
+
+            <Text style={styles.label}>Rezultat review</Text>
+            <View style={styles.statusSelector}>
+              {(["Pending", "Correct", "Partially correct", "Wrong"] as const).map((value) => (
+                <PrimaryButton key={value} label={value} onPress={() => setBiasOutcome(value)} variant={biasOutcome === value ? "gold" : "ghost"} />
+              ))}
+            </View>
+
+            <Text style={styles.label}>Context</Text>
+            <TextInput value={biasNotes} onChangeText={setBiasNotes} style={[styles.input, styles.notes]} placeholder="Contextul și condițiile acestui bias" placeholderTextColor="#6F6A5C" multiline />
+
+            <Text style={styles.label}>Dată publicare</Text>
+            <TextInput value={biasDate} onChangeText={setBiasDate} style={styles.input} placeholderTextColor="#6F6A5C" />
+
+            <PrimaryButton
+              label={editingBiasId ? "Salvează bias-ul" : "Publică bias-ul"}
+              onPress={() => {
+                const input = {
+                  market: biasMarket,
+                  forecastedBias: biasForecasted,
+                  confidence: biasConfidence,
+                  outcome: biasOutcome,
+                  notes: biasNotes.trim(),
+                  publishedAt: normalizeIsoDate(biasDate),
+                };
+
+                if (editingBiasId) {
+                  updateDailyBias(editingBiasId, input);
+                } else {
+                  publishDailyBias(input);
+                }
+
+                resetBiasComposer();
+                setActiveComposer(null);
+              }}
+            />
+            {editingBiasId ? <PrimaryButton label="Anulează editarea" variant="ghost" onPress={resetBiasComposer} /> : null}
+          </View>
+        </>
+      ) : null}
 
       {activeComposer === "private" ? (
       <>
@@ -757,8 +863,30 @@ export default function AdminScreen() {
         eyebrow="Conținut"
         caption="Briefinguri, After Action Review și Altcoins sunt grupate clar și nu mai ocupă permanent tot ecranul."
         defaultOpen={false}
-        rightLabel={`${analyses.length + reviews.length + altcoinPosts.length}`}
+        rightLabel={`${analyses.length + dailyBiases.length + reviews.length + altcoinPosts.length}`}
       >
+        <SectionHeader eyebrow="Daily Bias" title="Arhivă Daily Bias" />
+        <View style={styles.list}>
+          {dailyBiases.map((bias) => (
+            <View key={bias.id} style={styles.item}>
+              <Pressable style={styles.collapseHeader} onPress={() => toggleContentItem(`bias-${bias.id}`)}>
+                <Text style={styles.collapseTitle}>{bias.market} • {bias.forecastedBias}</Text>
+                <Text style={styles.collapseMeta}>{expandedContent[`bias-${bias.id}`] ? "Ascunde" : "Arată"}</Text>
+              </Pressable>
+              {expandedContent[`bias-${bias.id}`] ? (
+                <>
+                  <Text style={styles.itemMeta}>{formatDate(bias.publishedAt)} • {bias.confidence} • {bias.outcome}</Text>
+                  <Text style={styles.requestNotes}>{bias.notes}</Text>
+                  <View style={styles.actionButtons}>
+                    <PrimaryButton label="Editează" variant="ghost" onPress={() => { startBiasEdit(bias.id); setActiveComposer("bias"); }} />
+                    <PrimaryButton label="Șterge" variant="ghost" onPress={() => deleteDailyBias(bias.id)} />
+                  </View>
+                </>
+              ) : null}
+            </View>
+          ))}
+        </View>
+
         <SectionHeader eyebrow="Briefing" title="Analize zilnice" />
         <View style={styles.list}>
           {analyses.slice(0, 8).map((item) => (

@@ -13,7 +13,6 @@ import { ReviewCard } from "@/components/ReviewCard";
 import { Screen } from "@/components/Screen";
 import { SectionHeader } from "@/components/SectionHeader";
 import { CORE_MARKETS } from "@/constants/markets";
-import { recentBiases, recentBiasProcessNote } from "@/data/recent-biases";
 import { groupReviewsByDate, isPremiumLocked, latestAnalysisByMarket } from "@/features/content/access";
 import { displayPlan, displayRank } from "@/lib/display";
 import { formatDailyLabel } from "@/lib/format";
@@ -25,7 +24,8 @@ const ONBOARDING_STORAGE_KEY = "execution-edge:onboarding-complete";
 export default function HomeScreen() {
   const [onboardingReady, setOnboardingReady] = useState(false);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
-  const { analyses, favorites, reviews, membership, toggleFavorite, user } = useAppState();
+  const { analyses, dailyBiases, favorites, reviews, membership, toggleFavorite, user } = useAppState();
+  const [selectedBiasMarket, setSelectedBiasMarket] = useState<"ALL" | "NQ" | "ES" | "BTC" | "ETH">("ALL");
   const latestPerMarket = latestAnalysisByMarket(analyses);
   const todayLabel = latestPerMarket[0] ? formatDailyLabel(latestPerMarket[0].publishedAt) : "";
   const premiumLocked = membership.currentPlan === "FREE";
@@ -35,6 +35,10 @@ export default function HomeScreen() {
     (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
   );
   const reviewGroups = groupReviewsByDate(visibleReviews);
+  const visibleBiases = dailyBiases
+    .filter((item) => selectedBiasMarket === "ALL" || item.market === selectedBiasMarket)
+    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+    .slice(0, 8);
 
   useEffect(() => {
     let cancelled = false;
@@ -122,14 +126,21 @@ export default function HomeScreen() {
       <SectionHeader
         eyebrow="ARHIVĂ REALĂ"
         title="Ultimele Daily Bias-uri"
-        caption="O selecție din ultimele review-uri: piață, bias, nivel de încredere și rezultat. Apasă un card pentru contextul complet notat în jurnal."
+        caption="Istoric organizat pe piață. Fiecare intrare are un singur instrument, contextul notat și rezultatul review-ului."
       />
-      <View style={styles.biasProcessCard}>
-        <Text style={styles.biasProcessTitle}>Observație de proces</Text>
-        <Text style={styles.biasProcessBody}>{recentBiasProcessNote}</Text>
+      <View style={styles.biasFilters}>
+        {(["ALL", "NQ", "ES", "BTC", "ETH"] as const).map((market) => (
+          <PrimaryButton
+            key={market}
+            label={market === "ALL" ? "Toate" : market}
+            variant={selectedBiasMarket === market ? "gold" : "ghost"}
+            onPress={() => setSelectedBiasMarket(market)}
+          />
+        ))}
       </View>
-      <View style={styles.biasList}>
-        {recentBiases.slice(0, 5).map((bias) => (
+      {visibleBiases.length ? (
+        <View style={styles.biasList}>
+          {visibleBiases.map((bias) => (
           <Pressable
             key={bias.id}
             style={styles.biasCard}
@@ -143,8 +154,14 @@ export default function HomeScreen() {
             <Text style={styles.biasPreview} numberOfLines={2}>{bias.notes}</Text>
             <Text style={styles.biasDate}>{formatDailyLabel(bias.publishedAt)} · Vezi contextul</Text>
           </Pressable>
-        ))}
-      </View>
+          ))}
+        </View>
+      ) : (
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyTitle}>Nu există încă bias-uri pentru această piață</Text>
+          <Text style={styles.emptyBody}>Bias-urile publicate din Admin vor apărea aici, grupate corect pe NQ, ES, BTC sau ETH.</Text>
+        </View>
+      )}
 
       <SectionHeader
         eyebrow="ACCES GRATUIT"
@@ -259,22 +276,7 @@ const styles = StyleSheet.create({
     fontSize: typography.body,
     lineHeight: 22,
   },
-  biasProcessCard: {
-    backgroundColor: colors.bgMuted,
-    borderColor: colors.borderSubtle,
-    borderRadius: 18,
-    borderWidth: 1,
-    gap: 8,
-    padding: 16,
-  },
-  biasProcessTitle: {
-    color: colors.goldBright,
-    fontSize: typography.small,
-    fontWeight: "800",
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
-  },
-  biasProcessBody: { color: colors.textSoft, fontSize: typography.body, lineHeight: 22 },
+  biasFilters: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   biasList: { gap: 10 },
   biasCard: {
     backgroundColor: colors.bgGlass,

@@ -5,6 +5,12 @@ import { AppState, Platform } from "react-native";
 
 import { isOwnerEmail, OWNER_EMAIL } from "@/constants/access";
 import { deleteDailyAnalysis, fetchDailyAnalyses, publishDailyAnalysis, updateDailyAnalysis } from "@/features/content/analyses";
+import {
+  deleteDailyBias as deleteDailyBiasRemote,
+  fetchDailyBiases,
+  publishDailyBias as publishDailyBiasRemote,
+  updateDailyBias as updateDailyBiasRemote,
+} from "@/features/content/biases";
 import { deleteAltcoinPost, fetchAltcoinPosts, publishAltcoinPost, updateAltcoinPost } from "@/features/content/altcoins";
 import {
   createContactMessage as persistContactMessage,
@@ -58,6 +64,7 @@ import {
   AfterActionReview,
   ContactMessage,
   DailyAnalysis,
+  DailyBias,
   FavoriteContentType,
   FavoriteItem,
   InAppNotification,
@@ -115,6 +122,8 @@ type NewReviewInput = Omit<AfterActionReview, "id" | "publishedAt" | "isFree"> &
   publishedAt?: string;
 };
 
+type NewDailyBiasInput = Omit<DailyBias, "id" | "publishedAt"> & { publishedAt?: string };
+
 type NewAltcoinPostInput = Omit<AltcoinPost, "id" | "publishedAt"> & {
   publishedAt?: string;
 };
@@ -165,6 +174,7 @@ interface AppContextValue {
   isAuthenticated: boolean;
   membership: MembershipStats;
   analyses: DailyAnalysis[];
+  dailyBiases: DailyBias[];
   altcoinPosts: AltcoinPost[];
   reviews: AfterActionReview[];
   requests: AnalysisRequest[];
@@ -198,6 +208,9 @@ interface AppContextValue {
   publishAnalysis: (input: NewAnalysisInput) => void;
   updateAnalysis: (analysisId: string, input: NewAnalysisInput) => void;
   deleteAnalysis: (analysisId: string) => void;
+  publishDailyBias: (input: NewDailyBiasInput) => void;
+  updateDailyBias: (biasId: string, input: NewDailyBiasInput) => void;
+  deleteDailyBias: (biasId: string) => void;
   publishAltcoinPost: (input: NewAltcoinPostInput) => void;
   updateAltcoinPost: (postId: string, input: NewAltcoinPostInput) => void;
   deleteAltcoinPost: (postId: string) => void;
@@ -257,6 +270,7 @@ export function AppProvider({ children }: PropsWithChildren) {
     }),
   );
   const [analysisState, setAnalysisState] = useState<DailyAnalysis[]>([]);
+  const [dailyBiasState, setDailyBiasState] = useState<DailyBias[]>([]);
   const [altcoinPostState, setAltcoinPostState] = useState<AltcoinPost[]>([]);
   const [reviewState, setReviewState] = useState<AfterActionReview[]>([]);
   const [requestState, setRequestState] = useState<AnalysisRequest[]>([]);
@@ -387,14 +401,19 @@ export function AppProvider({ children }: PropsWithChildren) {
     })();
 
     void (async () => {
-      const [analysesResult, reviewsResult, altcoinsResult] = await Promise.all([
+      const [analysesResult, biasesResult, reviewsResult, altcoinsResult] = await Promise.all([
         fetchDailyAnalyses(),
+        fetchDailyBiases(),
         fetchAfterActionReviews(),
         fetchAltcoinPosts(),
       ]);
 
       if (!analysesResult.error && analysesResult.data) {
         setAnalysisState(analysesResult.data);
+      }
+
+      if (!biasesResult.error && biasesResult.data) {
+        setDailyBiasState(biasesResult.data);
       }
 
       if (!reviewsResult.error && reviewsResult.data) {
@@ -576,6 +595,7 @@ export function AppProvider({ children }: PropsWithChildren) {
       isAuthenticated: Boolean(session?.user),
       membership,
       analyses: analysisState,
+      dailyBiases: dailyBiasState,
       altcoinPosts: altcoinPostState,
       reviews: reviewState,
       requests: requestState.filter((request) =>
@@ -1196,6 +1216,34 @@ export function AppProvider({ children }: PropsWithChildren) {
         setAnalysisState((prev) => prev.filter((item) => item.id !== analysisId));
         void deleteDailyAnalysis(analysisId);
       },
+      publishDailyBias: (input) => {
+        const next: DailyBias = {
+          ...input,
+          id: `bias-${input.market.toLowerCase()}-${Date.now()}`,
+          publishedAt: normalizeIsoDate(input.publishedAt),
+        };
+
+        setDailyBiasState((prev) => [next, ...prev]);
+        void publishDailyBiasRemote(next).then((result) => {
+          if (result.data) {
+            setDailyBiasState((prev) => prev.map((item) => (item.id === next.id ? result.data! : item)));
+          }
+        });
+      },
+      updateDailyBias: (biasId, input) => {
+        const existing = dailyBiasState.find((item) => item.id === biasId);
+        const next = {
+          ...input,
+          publishedAt: normalizeIsoDate(input.publishedAt, existing?.publishedAt),
+        };
+
+        setDailyBiasState((prev) => prev.map((item) => (item.id === biasId ? { ...item, ...next } : item)));
+        void updateDailyBiasRemote(biasId, next);
+      },
+      deleteDailyBias: (biasId) => {
+        setDailyBiasState((prev) => prev.filter((item) => item.id !== biasId));
+        void deleteDailyBiasRemote(biasId);
+      },
       publishAltcoinPost: (input) => {
         const next: AltcoinPost = {
           ...input,
@@ -1779,6 +1827,7 @@ export function AppProvider({ children }: PropsWithChildren) {
       session,
       authReady,
       analysisState,
+      dailyBiasState,
       authEmail,
       authMessage,
       authPassword,

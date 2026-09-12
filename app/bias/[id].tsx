@@ -3,13 +3,14 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Screen } from "@/components/Screen";
-import { recentBiases } from "@/data/recent-biases";
 import { formatDate } from "@/lib/format";
+import { useAppState } from "@/providers/AppProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 
 export default function BiasDetailScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const bias = recentBiases.find((item) => item.id === id);
+  const { dailyBiases } = useAppState();
+  const bias = dailyBiases.find((item) => item.id === id);
 
   if (!bias) {
     return (
