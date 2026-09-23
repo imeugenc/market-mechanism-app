@@ -99,6 +99,7 @@ export interface MembershipStats {
   startedAt?: string;
   expiresAt?: string;
   renewalMode?: "manual" | "none";
+  accessSource?: string;
   loginStreak: number;
   totalViews: number;
   premiumViews: number;
