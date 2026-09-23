@@ -16,7 +16,7 @@ const benefits = ["Briefinguri video zilnice", "Acces complet pentru BTC, ETH, N
 
 export default function MembershipScreen() {
   const { membership, paymentRequests, session } = useAppState();
-  const [durationDays, setDurationDays] = useState<30 | 90>(30);
+  const [plan, setPlan] = useState<"monthly" | "quarterly">("monthly");
   const [feedback, setFeedback] = useState("");
   const [billing, setBilling] = useState<MarketBillingStatus["subscription"]>(null);
   const [busy, setBusy] = useState(false);
@@ -30,7 +30,7 @@ export default function MembershipScreen() {
   const checkout = async () => {
     setBusy(true); setFeedback("");
     try {
-      const result = await marketBilling("checkout", durationDays === 30 ? "monthly" : "quarterly");
+      const result = await marketBilling("checkout", plan);
       if (!result.url) throw new Error("Plata nu a putut fi deschisă.");
       await Linking.openURL(result.url);
     } catch (error) { setFeedback(String((error as Error).message)); }
@@ -55,10 +55,10 @@ export default function MembershipScreen() {
         <View style={styles.currentPlan}><Text style={styles.currentLabel}>PLAN CURENT</Text><Text style={styles.currentValue}>{displayPlan(membership.currentPlan)}</Text>{membership.accessSource ? <Text style={styles.currentMeta}>{membership.accessSource === "market_paid" ? "Abonament Market" : membership.accessSource.startsWith("journal_") ? "Inclus prin MM Edge Journal" : membership.accessSource === "market_manual" ? "Acces Market acordat manual" : "Acces Owner"}</Text> : null}{membership.expiresAt ? <Text style={styles.currentMeta}>până la {formatDate(membership.expiresAt)}</Text> : null}</View>
       </View>
 
-      <View style={styles.planGrid}>
-        <PlanCard days={30} price="10$" selected={durationDays === 30} onPress={() => setDurationDays(30)} />
-        <PlanCard days={90} price="25$" selected={durationDays === 90} badge="Economisești" onPress={() => setDurationDays(90)} />
-      </View>
+      {membership.accessSource !== "owner" ? <View style={styles.planGrid}>
+        <PlanCard label="1 lună" price="10$" selected={plan === "monthly"} onPress={() => setPlan("monthly")} />
+        <PlanCard label="3 luni" price="25$" selected={plan === "quarterly"} badge="Economisești" onPress={() => setPlan("quarterly")} />
+      </View> : null}
 
       <View style={styles.benefitCard}>
         <Text style={styles.sectionTitle}>Ce deblochezi</Text>
@@ -73,7 +73,7 @@ export default function MembershipScreen() {
         ? <><PrimaryButton label={confirmCancel ? "Confirmă anularea" : "Anulează reînnoirea"} variant="ghost" onPress={() => confirmCancel ? void changeRenewal("cancel") : setConfirmCancel(true)} /><Text style={styles.body}>{confirmCancel ? "Premium rămâne activ până la sfârșitul perioadei plătite, apoi nu se mai reînnoiește." : ""}</Text></>
         : billing?.cancelAtPeriodEnd && billing.paidThroughAt && Date.parse(billing.paidThroughAt) > Date.now()
           ? <PrimaryButton label="Reia reînnoirea" onPress={() => void changeRenewal("resume")} />
-          : <PrimaryButton label={busy ? "Se deschide plata…" : `Abonează-te pentru ${durationDays} zile`} onPress={() => void checkout()} />}
+          : <PrimaryButton label={busy ? "Se deschide plata…" : `Abonează-te: ${plan === "monthly" ? "1 lună" : "3 luni"}`} onPress={() => void checkout()} />}
 
       <CollapsibleSection title="Gratuit vs Premium" eyebrow="Comparație">
         <ComparisonLine label="After Action Review" free="Inclus" premium="Inclus" />
@@ -90,8 +90,8 @@ export default function MembershipScreen() {
   );
 }
 
-function PlanCard({ days, price, selected, badge, onPress }: { days: number; price: string; selected: boolean; badge?: string; onPress: () => void }) {
-  return <Pressable onPress={onPress} style={[styles.planCard, selected && styles.planCardSelected]}>{badge ? <Text style={styles.badge}>{badge}</Text> : null}<Text style={styles.planDays}>{days} zile</Text><Text style={styles.planPrice}>{price}</Text><Text style={styles.planCaption}>Acces Premium complet</Text><View style={[styles.radio, selected && styles.radioSelected]} /></Pressable>;
+function PlanCard({ label, price, selected, badge, onPress }: { label: string; price: string; selected: boolean; badge?: string; onPress: () => void }) {
+  return <Pressable onPress={onPress} style={[styles.planCard, selected && styles.planCardSelected]}>{badge ? <Text style={styles.badge}>{badge}</Text> : null}<Text style={styles.planDays}>{label}</Text><Text style={styles.planPrice}>{price}</Text><Text style={styles.planCaption}>Acces Premium complet</Text><View style={[styles.radio, selected && styles.radioSelected]} /></Pressable>;
 }
 function ComparisonLine({ label, free, premium }: { label: string; free: string; premium: string }) { return <View style={styles.compare}><Text style={styles.compareLabel}>{label}</Text><Text style={styles.compareValue}>{free}</Text><Text style={[styles.compareValue, styles.comparePremium]}>{premium}</Text></View>; }
 function PaymentLine({ label, value }: { label: string; value: string }) { return <View style={styles.paymentLine}><Text style={styles.helper}>{label}</Text><Text selectable style={styles.paymentValue}>{value}</Text></View>; }
