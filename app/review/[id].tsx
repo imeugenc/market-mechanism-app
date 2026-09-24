@@ -10,18 +10,18 @@ import { createContentComment, deleteContentComment, fetchContentComments } from
 import { useAppState } from "@/providers/AppProvider";
 import { formatDate } from "@/lib/format";
 import { useClientReady } from "@/hooks/useResponsiveWeb";
-import { sanitizeRemoteImageUrl } from "@/lib/media";
+import { contentPreviewImage } from "@/lib/media";
 import { colors, radii, spacing, typography } from "@/theme";
 import { Image } from "react-native";
 import { ContentComment } from "@/types/domain";
 
 export default function ReviewDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { dailyBiases, publicContentState, session, user, reviews } = useAppState();
+  const { dailyBiases, publicContentStates, session, user, reviews } = useAppState();
   const clientReady = useClientReady();
   const review = reviews.find((item) => item.id === id);
   const relatedBias = dailyBiases.find((item) => item.relatedReviewId === id);
-  const chartImage = sanitizeRemoteImageUrl(review?.thumbnailUrl || review?.chartImage);
+  const chartImage = contentPreviewImage(review ?? {});
   const [comments, setComments] = useState<ContentComment[]>([]);
   const [commentBody, setCommentBody] = useState("");
   const [commentError, setCommentError] = useState("");
@@ -68,8 +68,8 @@ export default function ReviewDetailScreen() {
     setCommentError("");
   };
 
-  if (!clientReady || publicContentState === "loading") return <Screen><ContentStatePanel kind="loading" title="Se încarcă After Action Review…" /></Screen>;
-  if (publicContentState === "error") return <Screen><ContentStatePanel kind="error" /></Screen>;
+  if (!clientReady || publicContentStates.reviews === "loading") return <Screen><ContentStatePanel kind="loading" title="Se încarcă After Action Review…" /></Screen>;
+  if (publicContentStates.reviews === "error") return <Screen><ContentStatePanel kind="error" /></Screen>;
 
   if (!review) {
     return (
@@ -88,11 +88,12 @@ export default function ReviewDetailScreen() {
       <View style={styles.card}>
         {chartImage ? (
           <Image source={{ uri: chartImage }} style={styles.image} />
-        ) : (
+        ) : review.tradingviewUrl ? (
           <View style={styles.previewUnavailable}>
-            <Text style={styles.previewUnavailableText}>Preview chart indisponibil</Text>
+            <Text style={styles.previewUnavailableText}>Grafic TradingView atașat</Text>
+            <Text style={styles.previewLink}>Deschide linkul de mai jos pentru grafic.</Text>
           </View>
-        )}
+        ) : null}
         <View style={styles.header}>
           <Text style={styles.market}>{review.market}</Text>
           <Text style={styles.date}>{formatDate(review.publishedAt)}</Text>
@@ -104,7 +105,7 @@ export default function ReviewDetailScreen() {
         {relatedBias ? (
           <View style={styles.relatedCard}>
             <Text style={styles.relatedEyebrow}>DAILY BIAS ASOCIAT</Text>
-            <Text style={styles.relatedTitle}>{relatedBias.market} · {relatedBias.forecastedBias} · {relatedBias.confidence} confidence</Text>
+            <Text style={styles.relatedTitle}>{relatedBias.market} · {relatedBias.forecastedBias} · Încredere {({ Low: "scăzută", Medium: "medie", High: "ridicată" } as const)[relatedBias.confidence]}</Text>
             <PrimaryButton label="Vezi Daily Bias" variant="ghost" onPress={() => router.push(`/bias/${relatedBias.id}` as Href)} />
           </View>
         ) : null}
@@ -188,10 +189,11 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   previewUnavailableText: {
-    color: colors.textMuted,
+    color: colors.textStrong,
     fontSize: typography.small,
     fontWeight: "700",
   },
+  previewLink: { color: colors.gold, fontSize: typography.small },
   relatedCard: {
     backgroundColor: colors.bgMuted,
     borderColor: colors.borderSubtle,

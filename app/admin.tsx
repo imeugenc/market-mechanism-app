@@ -156,7 +156,8 @@ export default function AdminScreen() {
     contactMessages: "active",
   });
   const isOwnerAdmin = user?.isAdmin || isOwnerEmail(session?.user?.email);
-  const pendingOperations = paymentRequests.filter((item) => item.status === "pending" && !item.archivedAt).length + requests.filter((item) => item.status !== "delivered" && item.status !== "cancelled").length + contactMessages.filter((item) => item.status === "new" && !item.archivedAt).length;
+  const actionableRequests = requests.filter((item) => !item.stripeCheckoutId || item.paymentStatus === "paid");
+  const pendingOperations = paymentRequests.filter((item) => item.status === "pending" && !item.archivedAt).length + actionableRequests.filter((item) => item.status !== "delivered" && item.status !== "cancelled").length + contactMessages.filter((item) => item.status === "new" && !item.archivedAt).length;
 
   const filteredPaymentRequests = paymentRequests.filter((item) => matchesArchiveFilter(item.archivedAt, archiveFilters.premiumRequests));
   const filteredPersonalRequests = personalRequests.filter((item) => matchesArchiveFilter(item.archivedAt, archiveFilters.personalDeliveries));
@@ -1408,7 +1409,7 @@ export default function AdminScreen() {
         <Text style={styles.collapseMeta}>{openSections.analysisRequests ? "Ascunde" : "Arată"}</Text>
       </Pressable>
       {openSections.analysisRequests ? <View style={styles.list}>
-        {requests.map((request) => {
+        {actionableRequests.map((request) => {
           const edit = getRequestEdit(request.id, request);
 
           return (
@@ -1453,7 +1454,7 @@ export default function AdminScreen() {
                   </View>
 
                   <Text style={styles.label}>Status plată</Text>
-                  <View style={styles.statusSelector}>
+                  {request.stripeCheckoutId ? <Text style={styles.requestNotes}>{request.paymentStatus === "paid" ? "Confirmată automat prin Stripe" : "Rambursată prin Stripe"}</Text> : <View style={styles.statusSelector}>
                     {(["pending", "paid", "refunded"] as PaymentStatus[]).map((status) => (
                       <PrimaryButton
                         key={status}
@@ -1467,7 +1468,7 @@ export default function AdminScreen() {
                         variant={edit.paymentStatus === status ? "gold" : "ghost"}
                       />
                     ))}
-                  </View>
+                  </View>}
 
                   <Text style={styles.label}>Mesaj pentru membru</Text>
                   <TextInput

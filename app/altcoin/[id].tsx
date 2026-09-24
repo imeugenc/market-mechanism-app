@@ -6,27 +6,28 @@ import { PrimaryButton } from "@/components/PrimaryButton";
 import { Screen } from "@/components/Screen";
 import { formatDailyLabel } from "@/lib/format";
 import { useClientReady } from "@/hooks/useResponsiveWeb";
-import { sanitizeRemoteImageUrl } from "@/lib/media";
+import { contentPreviewImage } from "@/lib/media";
 import { useAppState } from "@/providers/AppProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 
 export default function AltcoinDetailScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const { altcoinPosts, favorites, membership, publicContentState, toggleFavorite } = useAppState();
+  const { altcoinPosts, favorites, membership, publicContentStates, toggleFavorite } = useAppState();
   const clientReady = useClientReady();
   const item = altcoinPosts.find((post) => post.id === id);
 
-  if (!clientReady || publicContentState === "loading") return <Screen><ContentStatePanel kind="loading" /></Screen>;
-  if (publicContentState === "error") return <Screen><ContentStatePanel kind="error" /></Screen>;
+  if (!clientReady || publicContentStates.altcoins === "loading") return <Screen><ContentStatePanel kind="loading" /></Screen>;
+  if (publicContentStates.altcoins === "error") return <Screen><ContentStatePanel kind="error" /></Screen>;
   if (!item) return <Screen><ContentStatePanel kind="removed" /><PrimaryButton label="Înapoi la Favorite" onPress={() => router.replace("/favorites" as Href)} /></Screen>;
 
   const locked = item.isPremium && membership.currentPlan === "FREE";
-  const image = sanitizeRemoteImageUrl(item.thumbnailUrl || item.chartImage);
+  const image = contentPreviewImage(item);
   return (
     <Screen webMaxWidth={860}>
       <Stack.Screen options={{ title: item.coinSymbol }} />
       <View style={styles.card}>
         {image ? <Image source={{ uri: image }} style={styles.image} /> : null}
+        {!locked && !image && item.tradingviewUrl ? <View style={styles.chartAttachment}><Text style={styles.chartAttachmentTitle}>Grafic TradingView atașat</Text><Text style={styles.chartAttachmentHint}>Deschide linkul de mai jos pentru grafic.</Text></View> : null}
         <Text style={styles.eyebrow}>{item.coinSymbol} · {item.isPremium ? "PREMIUM" : "ACCES GRATUIT"}</Text>
         <Text style={styles.title}>{item.title}</Text><Text style={styles.date}>{formatDailyLabel(item.publishedAt)}</Text>
         <Text style={styles.summary}>{item.summary}</Text>
@@ -42,6 +43,9 @@ export default function AltcoinDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  chartAttachment: { backgroundColor: colors.bgMuted, borderColor: colors.borderSubtle, borderRadius: radii.md, borderWidth: 1, gap: spacing.sm, padding: spacing.md },
+  chartAttachmentTitle: { color: colors.textStrong, fontSize: typography.body, fontWeight: "800" },
+  chartAttachmentHint: { color: colors.gold, fontSize: typography.small },
   card: { backgroundColor: colors.bgGlass, borderColor: colors.border, borderRadius: radii.lg, borderWidth: 1, gap: spacing.md, overflow: "hidden", padding: spacing.lg },
   image: { borderRadius: radii.md, height: 260, width: "100%" },
   eyebrow: { color: colors.gold, fontSize: typography.small, fontWeight: "800", letterSpacing: 1.2 },

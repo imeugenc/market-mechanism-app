@@ -89,6 +89,7 @@ export interface AnalysisRequest {
   status: RequestStatus;
   deliveryType: "text" | "video";
   paymentStatus: PaymentStatus;
+  stripeCheckoutId?: string;
   paymentProof?: string;
   paymentReference?: string;
   adminNotes?: string;

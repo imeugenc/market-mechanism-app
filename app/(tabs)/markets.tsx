@@ -12,22 +12,20 @@ import { useAppState } from "@/providers/AppProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 
 export default function MarketsScreen() {
-  const { analyses, dailyBiases, publicContentState, reviews } = useAppState();
+  const { analyses, dailyBiases, publicContentState, publicContentStates, reviews } = useAppState();
+  const marketContentStatus = [publicContentStates.analyses, publicContentStates.biases, publicContentStates.reviews].includes("loading") ? "loading" : publicContentState === "error" || publicContentState === "partial" ? "error" : "ready";
 
   return (
     <Screen>
       <SectionHeader eyebrow="Piețe" title="Context pe instrument" caption="Alege piața o singură dată, apoi vezi separat conținutul curent și istoricul." />
-      {publicContentState === "loading" ? <ContentStatePanel kind="loading" /> : null}
       {publicContentState === "error" ? <ContentStatePanel kind="error" /> : null}
       {publicContentState === "partial" ? <ContentStatePanel kind="error" title="Unele piețe nu s-au încărcat" message="Poți folosi în continuare conținutul disponibil." compact /> : null}
-      {publicContentState !== "loading" && publicContentState !== "error" ? (
         <View style={styles.grid}>
           {CORE_MARKETS.map((market) => {
             const newest = sortNewest([...analyses.filter((item) => item.market === market), ...dailyBiases.filter((item) => item.market === market), ...reviews.filter((item) => item.market === market)])[0];
-            return <MarketCard key={market} market={market} latestPublishedAt={newest?.publishedAt} />;
+            return <MarketCard key={market} market={market} latestPublishedAt={newest?.publishedAt} contentStatus={marketContentStatus} />;
           })}
         </View>
-      ) : null}
 
       <Pressable style={styles.altcoinCard} onPress={() => router.push("/(tabs)/markets/altcoins")}>
         <View style={styles.altcoinIcon}><MaterialCommunityIcons name="chart-bubble" color={colors.gold} size={22} /></View>

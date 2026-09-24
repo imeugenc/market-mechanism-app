@@ -9,7 +9,7 @@ import { fetchDailyBiasById } from "@/features/content/biases";
 import { isPublishedToday } from "@/lib/contentAvailability";
 import { useClientReady } from "@/hooks/useResponsiveWeb";
 import { formatDate } from "@/lib/format";
-import { sanitizeRemoteImageUrl } from "@/lib/media";
+import { contentPreviewImage } from "@/lib/media";
 import { useAppState } from "@/providers/AppProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 import type { DailyBias } from "@/types/domain";
@@ -43,7 +43,7 @@ export default function BiasDetailScreen() {
   }, [id]);
 
   const bias = detail.id === id ? detail.bias : null;
-  const chartImage = sanitizeRemoteImageUrl(bias?.thumbnailUrl || bias?.chartImage);
+  const chartImage = contentPreviewImage(bias ?? {});
   const relatedReview = reviews.find((item) => item.id === bias?.relatedReviewId);
 
   if (!clientReady || !id || detail.id !== id || detail.status === "loading") {
@@ -69,6 +69,7 @@ export default function BiasDetailScreen() {
       <Stack.Screen options={{ title: "Daily Bias", headerBackTitle: "", headerBackButtonDisplayMode: "minimal" }} />
       <View style={styles.card}>
         {chartImage ? <Image source={{ uri: chartImage }} style={styles.image} /> : null}
+        {!chartImage && bias.tradingviewUrl ? <View style={styles.chartAttachment}><Text style={styles.chartAttachmentTitle}>Grafic TradingView atașat</Text><Text style={styles.chartAttachmentHint}>Deschide linkul de mai jos pentru grafic.</Text></View> : null}
         <Text style={styles.eyebrow}>{isPublishedToday(bias.publishedAt) && bias.outcome === "Pending" ? "BIAS CURENT" : bias.outcome === "Pending" ? "BIAS RECENT" : "BIAS ISTORIC"}</Text>
         <Text style={styles.title}>{bias.market}</Text>
         <Text style={styles.date}>{formatDate(bias.tradingDate || bias.publishedAt)}</Text>
@@ -103,6 +104,9 @@ export default function BiasDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  chartAttachment: { backgroundColor: colors.bgMuted, borderColor: colors.borderSubtle, borderRadius: radii.md, borderWidth: 1, gap: spacing.sm, padding: spacing.md },
+  chartAttachmentTitle: { color: colors.textStrong, fontSize: typography.body, fontWeight: "800" },
+  chartAttachmentHint: { color: colors.gold, fontSize: typography.small },
   card: {
     backgroundColor: colors.bgGlass,
     borderColor: colors.border,

@@ -9,8 +9,8 @@ import { useAppState } from "@/providers/AppProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 
 export default function FavoritesScreen() {
-  const { analyses, altcoinPosts, dailyBiases, favorites, protectedDataState, publicContentState, reviews, toggleFavorite } = useAppState();
-  const loading = protectedDataState === "loading" || publicContentState === "loading";
+  const { analyses, altcoinPosts, favorites, protectedDataState, publicContentStates, reviews, toggleFavorite } = useAppState();
+  const loading = protectedDataState === "loading";
 
   const resolveHref = (type: (typeof favorites)[number]["contentType"], id: string): Href | null => {
     if (type === "analysis" && analyses.some((item) => item.id === id)) return `/analysis/${id}` as Href;
@@ -24,12 +24,13 @@ export default function FavoritesScreen() {
       <SectionHeader eyebrow="Biblioteca ta" title="Favorite" caption="Fiecare element salvat deschide conținutul exact, nu doar piața asociată." />
       {loading ? <ContentStatePanel kind="loading" /> : null}
       {!loading && protectedDataState === "error" ? <ContentStatePanel kind="error" /> : null}
-      {!loading && (protectedDataState === "partial" || publicContentState === "partial") ? <ContentStatePanel kind="error" title="Unele elemente nu s-au încărcat" message="Favoritele disponibile sunt afișate mai jos." compact /> : null}
+      {!loading && protectedDataState === "partial" ? <ContentStatePanel kind="error" title="Unele elemente nu s-au încărcat" message="Favoritele disponibile sunt afișate mai jos." compact /> : null}
       {!loading && protectedDataState !== "error" && !favorites.length ? <ContentStatePanel kind="empty" title="Nu ai încă elemente salvate" message="Folosește steaua de pe Bias, AAR, briefinguri sau Altcoins." /> : null}
       {!loading ? <View style={styles.list}>{favorites.map((item) => {
         const href = resolveHref(item.contentType, item.contentId);
+        const sourceState = publicContentStates[item.contentType === "analysis" ? "analyses" : item.contentType === "review" ? "reviews" : "altcoins"];
         return <Pressable key={item.id} style={styles.row} onPress={() => href && router.push(href)}>
-          <View style={styles.copy}><Text style={styles.type}>{item.contentType === "analysis" ? "BRIEFING" : item.contentType === "review" ? "AFTER ACTION REVIEW" : "ALTCOINS"}</Text><Text style={styles.title}>{item.title}</Text>{item.subtitle ? <Text style={styles.body} numberOfLines={2}>{item.subtitle}</Text> : null}{!href ? <Text style={styles.removed}>Acest element salvat nu mai este disponibil.</Text> : null}</View>
+          <View style={styles.copy}><Text style={styles.type}>{item.contentType === "analysis" ? "BRIEFING" : item.contentType === "review" ? "AFTER ACTION REVIEW" : "ALTCOINS"}</Text><Text style={styles.title}>{item.title}</Text>{item.subtitle ? <Text style={styles.body} numberOfLines={2}>{item.subtitle}</Text> : null}{!href ? <Text style={styles.removed}>{sourceState === "loading" ? "Se verifică elementul salvat…" : sourceState === "error" ? "Elementul este temporar indisponibil." : "Acest element salvat nu mai este disponibil."}</Text> : null}</View>
           <Pressable hitSlop={10} style={styles.remove} onPress={(event) => { event.stopPropagation(); void toggleFavorite({ contentType: item.contentType, contentId: item.contentId, title: item.title, subtitle: item.subtitle, marketLabel: item.marketLabel }); }}><MaterialCommunityIcons name="star-off-outline" color={colors.gold} size={19} /></Pressable>
           {href ? <MaterialCommunityIcons name="chevron-right" color={colors.textSoft} size={22} /> : null}
         </Pressable>;

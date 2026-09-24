@@ -4,7 +4,7 @@ import { router } from "expo-router";
 
 import { AfterActionReview } from "@/types/domain";
 import { formatDate } from "@/lib/format";
-import { sanitizeRemoteImageUrl } from "@/lib/media";
+import { contentPreviewImage } from "@/lib/media";
 import { colors, radii, typography } from "@/theme";
 
 export function ReviewCard({
@@ -16,17 +16,18 @@ export function ReviewCard({
   favorited?: boolean;
   onToggleFavorite?: () => void;
 }) {
-  const chartImage = sanitizeRemoteImageUrl(item.chartImage);
+  const chartImage = contentPreviewImage(item);
 
   return (
     <Pressable style={styles.card} onPress={() => router.push(`/review/${item.id}`)}>
       {chartImage ? (
         <Image source={{ uri: chartImage }} style={styles.image} />
-      ) : (
+      ) : item.tradingviewUrl ? (
         <View style={styles.previewUnavailable}>
-          <Text style={styles.previewUnavailableText}>Preview chart indisponibil</Text>
+          <Text style={styles.previewUnavailableText}>Grafic TradingView atașat</Text>
+          <Text style={styles.previewLink}>Vezi graficul pe TradingView</Text>
         </View>
-      )}
+      ) : null}
       <View style={styles.headerRow}>
         <Text style={styles.market}>{item.market}</Text>
         <View style={styles.headerActions}>
@@ -79,9 +80,13 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   previewUnavailableText: {
-    color: colors.textMuted,
+    color: colors.textStrong,
     fontSize: typography.small,
     fontWeight: "700",
+  },
+  previewLink: {
+    color: colors.gold,
+    fontSize: typography.small,
   },
   headerRow: {
     flexDirection: "row",

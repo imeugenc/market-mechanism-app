@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { router, useLocalSearchParams } from "expo-router";
 import { Alert, Linking, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { ContentStatePanel } from "@/components/ContentStatePanel";
@@ -7,6 +8,7 @@ import { Screen } from "@/components/Screen";
 import { SectionHeader } from "@/components/SectionHeader";
 import { SegmentedControl } from "@/components/SegmentedControl";
 import { TierCard } from "@/components/TierCard";
+import { startAnalysisCheckout } from "@/features/requests/stripe-checkout";
 import { pickAndUploadPaymentProof } from "@/features/storage/paymentProofs";
 import { REQUEST_TIERS } from "@/features/requests/tiers";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -25,7 +27,8 @@ const statusLabel: Record<RequestStatus, string> = {
 };
 
 export default function RequestsScreen() {
-  const { createRequest, notifications, personalRequests, protectedDataState, requests, session, user } = useAppState();
+  const { createRequest, notifications, personalRequests, protectedDataState, refreshProtectedData, requests, session, user } = useAppState();
+  const { checkout } = useLocalSearchParams<{ checkout?: string }>();
   const activeEmail = session?.user?.email ?? user?.email ?? "";
   const isAuthenticated = Boolean(session?.user);
   const [mode, setMode] = useState<PageMode>("mine");
@@ -39,12 +42,31 @@ export default function RequestsScreen() {
   const [error, setError] = useState("");
   const [uploadingProof, setUploadingProof] = useState(false);
   const [showPaymentDetails, setShowPaymentDetails] = useState(false);
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
   const selectedTier = REQUEST_TIERS.find((item) => item.tier === tier) ?? REQUEST_TIERS[1];
 
   const filterStatus = (status: RequestStatus) => historyFilter === "all" || (historyFilter === "delivered" ? status === "delivered" : status !== "delivered" && status !== "cancelled");
   const visibleRequests = requests.filter((item) => filterStatus(item.status));
   const visibleDeliveries = personalRequests.filter((item) => filterStatus(item.status));
   const totalVisible = visibleRequests.length + visibleDeliveries.length;
+
+  useEffect(() => {
+    if (checkout === "success" && session?.user) void refreshProtectedData();
+  }, [checkout, session?.user?.id]);
+
+  const handleStripeCheckout = async () => {
+    if (assetInput.trim().length < 2) return setError("Introdu un activ sau ticker valid.");
+    if (!session?.access_token) return router.push("/auth/login");
+    setCheckoutBusy(true); setError("");
+    try {
+      const url = await startAnalysisCheckout({ accessToken: session.access_token, tier, assetInput: assetInput.trim(), notes: notes.trim() });
+      await Linking.openURL(url);
+    } catch (checkoutError) {
+      setError(String((checkoutError as Error).message));
+    } finally {
+      setCheckoutBusy(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (assetInput.trim().length < 2) return setError("Introdu un activ sau ticker valid.");
@@ -68,6 +90,8 @@ export default function RequestsScreen() {
   return (
     <Screen>
       <SectionHeader eyebrow="Analize" title="Analize personale" caption="Urmărește cererile și livrările tale sau trimite o solicitare nouă." />
+      {checkout === "success" ? <ContentStatePanel kind="empty" title="Plata este în curs de confirmare" message="Cererea apare mai jos imediat ce Stripe confirmă plata. Dacă vezi încă „Așteaptă plata Stripe”, reîncarcă pagina în câteva momente." compact /> : null}
+      {checkout === "cancelled" ? <ContentStatePanel kind="empty" title="Plata nu a fost finalizată" message="Poți relua plata din formularul de analiză." compact /> : null}
       <SegmentedControl value={mode} options={[{ value: "mine", label: "Analizele mele" }, { value: "request", label: "Solicită analiză" }]} onChange={setMode} />
 
       {mode === "mine" ? (
@@ -81,7 +105,7 @@ export default function RequestsScreen() {
               <View style={styles.itemTop}><View><Text style={styles.itemEyebrow}>CERERE · {request.assetInput}</Text><Text style={styles.itemTitle}>{request.deliveryType === "video" ? "Analiză video" : "Analiză rapidă"}</Text></View><StatusBadge status={request.status} /></View>
               <Text style={styles.meta}>{formatDate(request.requestedAt)} · {formatCurrency(request.tier)}</Text>
               {request.notes ? <Text style={styles.body}>{request.notes}</Text> : null}
-              <View style={styles.lifecycle}><Text style={styles.lifecycleText}>Trimisă</Text><Text style={styles.arrow}>›</Text><Text style={styles.lifecycleText}>{request.paymentStatus === "paid" ? "Plată verificată" : "Plată în verificare"}</Text><Text style={styles.arrow}>›</Text><Text style={styles.lifecycleText}>{statusLabel[request.status]}</Text></View>
+              <View style={styles.lifecycle}><Text style={styles.lifecycleText}>Cerere creată</Text><Text style={styles.arrow}>›</Text><Text style={styles.lifecycleText}>{request.paymentStatus === "paid" ? "Plată confirmată" : request.paymentStatus === "refunded" ? "Plată rambursată" : request.stripeCheckoutId ? "Așteaptă plata Stripe" : "Plată în verificare"}</Text><Text style={styles.arrow}>›</Text><Text style={styles.lifecycleText}>{statusLabel[request.status]}</Text></View>
               {request.adminNotes || request.deliveryNotes ? <Text style={styles.deliveryNote}>{request.deliveryNotes ?? request.adminNotes}</Text> : null}
               {request.status === "delivered" && (request.deliveryVideoUrl || request.deliveryUrl) ? <PrimaryButton label="Deschide analiza livrată" onPress={() => void Linking.openURL((request.deliveryVideoUrl || request.deliveryUrl)!)} /> : null}
             </View>)}
@@ -96,7 +120,7 @@ export default function RequestsScreen() {
         </>
       ) : (
         <>
-          <View style={styles.promise}><Text style={styles.promiseTitle}>Proces clar, urmărit în aplicație</Text><Text style={styles.body}>Trimisă → Plata în verificare → Acceptată → În lucru → Livrată</Text><Text style={styles.promiseNote}>Termenul de livrare începe după verificarea plății și acceptarea cererii.</Text></View>
+          <View style={styles.promise}><Text style={styles.promiseTitle}>De la solicitare la livrare</Text><Text style={styles.body}>Alege analiza → Descrie activul → Plătește → Urmărește cererea → Primește livrarea</Text><Text style={styles.promiseNote}>Termenul de livrare începe după confirmarea plății și acceptarea cererii.</Text></View>
 
           <SectionHeader eyebrow="Pasul 1" title="Alege tipul analizei" />
           <View style={styles.tiers}>{REQUEST_TIERS.map((item) => <TierCard key={item.tier} tier={item.tier} title={item.title} selected={tier === item.tier} description={item.description} deliveryLabel={item.deliveryLabel} turnaround={item.turnaround} onPress={() => setTier(item.tier)} />)}</View>
@@ -108,16 +132,20 @@ export default function RequestsScreen() {
             <Text style={styles.label}>Context suplimentar</Text><TextInput value={notes} onChangeText={setNotes} style={[styles.input, styles.textarea]} placeholder="Setup, interval, întrebarea principală…" placeholderTextColor={colors.textSoft} multiline />
           </View>
 
-          <SectionHeader eyebrow="Pasul 3" title="Confirmă plata" />
+          <SectionHeader eyebrow="Pasul 3" title="Plătește analiza" />
           <View style={styles.form}>
             <View style={styles.orderSummary}><Text style={styles.itemTitle}>{selectedTier.title}</Text><Text style={styles.price}>{formatCurrency(selectedTier.tier)}</Text></View>
-            <Pressable onPress={() => setShowPaymentDetails((value) => !value)} style={styles.disclosure}><Text style={styles.disclosureText}>{showPaymentDetails ? "Ascunde metodele de plată" : "Vezi metodele de plată"}</Text><Text style={styles.arrow}>{showPaymentDetails ? "⌃" : "⌄"}</Text></Pressable>
-            {showPaymentDetails ? <View style={styles.paymentDetails}><PaymentLine label="PayPal" value="eugenfm95@gmail.com" /><PaymentLine label="USDT (TRC20)" value="TLuz2gAdrWjv7UbS9FTcrkH2Z7pCw2RZLx" /><PaymentLine label="RedotPay UserID" value="1838748987" /><Text style={styles.promiseNote}>Verificarea manuală a plății poate dura până la 24 de ore.</Text></View> : null}
-            <Text style={styles.label}>Dovadă plată</Text><TextInput value={paymentProof} onChangeText={setPaymentProof} style={[styles.input, styles.textarea]} placeholder="Link sau detalii despre dovadă" placeholderTextColor={colors.textSoft} multiline />
-            <PrimaryButton label={uploadingProof ? "Se încarcă…" : "Încarcă o captură"} variant="ghost" onPress={() => void uploadProof()} />
-            <Text style={styles.label}>Referință tranzacție</Text><TextInput value={paymentReference} onChangeText={setPaymentReference} style={styles.input} placeholder="ID / hash / referință" placeholderTextColor={colors.textSoft} autoCapitalize="none" />
+            <PrimaryButton label={!isAuthenticated ? "Autentifică-te pentru plată" : checkoutBusy ? "Se deschide Stripe…" : "Plătește securizat cu Stripe"} onPress={() => void handleStripeCheckout()} />
+            <Pressable onPress={() => setShowPaymentDetails((value) => !value)} style={styles.disclosure}><Text style={styles.disclosureText}>{showPaymentDetails ? "Ascunde alte metode de plată" : "Alte metode de plată"}</Text><Text style={styles.arrow}>{showPaymentDetails ? "⌃" : "⌄"}</Text></Pressable>
+            {showPaymentDetails ? <View style={styles.paymentDetails}>
+              <PaymentLine label="PayPal" value="eugenfm95@gmail.com" /><PaymentLine label="USDT (TRC20)" value="TLuz2gAdrWjv7UbS9FTcrkH2Z7pCw2RZLx" /><PaymentLine label="RedotPay UserID" value="1838748987" />
+              <Text style={styles.promiseNote}>Verificarea manuală a plății poate dura până la 24 de ore.</Text>
+              <Text style={styles.label}>Dovadă plată</Text><TextInput value={paymentProof} onChangeText={setPaymentProof} style={[styles.input, styles.textarea]} placeholder="Link sau detalii despre dovadă" placeholderTextColor={colors.textSoft} multiline />
+              <PrimaryButton label={uploadingProof ? "Se încarcă…" : "Încarcă o captură"} variant="ghost" onPress={() => void uploadProof()} />
+              <Text style={styles.label}>Referință tranzacție</Text><TextInput value={paymentReference} onChangeText={setPaymentReference} style={styles.input} placeholder="ID / hash / referință" placeholderTextColor={colors.textSoft} autoCapitalize="none" />
+              <PrimaryButton label="Trimite cererea cu plată manuală" variant="ghost" onPress={() => void handleSubmit()} />
+            </View> : null}
             {error ? <Text style={styles.error}>{error}</Text> : null}
-            <PrimaryButton label="Trimite cererea" onPress={() => void handleSubmit()} />
           </View>
           {notifications[0] ? <View style={styles.notice}><Text style={styles.itemTitle}>{notifications[0].title}</Text><Text style={styles.body}>{notifications[0].body}</Text></View> : null}
         </>

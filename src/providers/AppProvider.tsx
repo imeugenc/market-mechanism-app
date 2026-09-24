@@ -169,6 +169,7 @@ type ActionResult = {
 };
 
 export type DataLoadState = "loading" | "ready" | "partial" | "error";
+type PublicContentStates = Record<"analyses" | "biases" | "reviews" | "altcoins", "loading" | "ready" | "error">;
 
 function resolveDataLoadState(results: Array<{ error: unknown }>): DataLoadState {
   const errorCount = results.filter((result) => Boolean(result.error)).length;
@@ -181,6 +182,7 @@ interface AppContextValue {
   user: AppUser | null;
   authReady: boolean;
   publicContentState: DataLoadState;
+  publicContentStates: PublicContentStates;
   protectedDataState: DataLoadState;
   isAuthenticated: boolean;
   membership: MembershipStats;
@@ -270,6 +272,7 @@ export function AppProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [publicContentState, setPublicContentState] = useState<DataLoadState>("loading");
+  const [publicContentStates, setPublicContentStates] = useState<PublicContentStates>({ analyses: "loading", biases: "loading", reviews: "loading", altcoins: "loading" });
   const [protectedDataState, setProtectedDataState] = useState<DataLoadState>("loading");
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
@@ -316,13 +319,14 @@ export function AppProvider({ children }: PropsWithChildren) {
     setContactMessageState([]);
   };
 
-  const applySessionState = async (nextSession: Session | null) => {
+  const applySessionState = async (nextSession: Session | null, onIdentityReady?: () => void) => {
     setSession(nextSession);
 
     const sessionUser = nextSession?.user;
     if (!sessionUser) {
       resetAuthState();
       setProtectedDataState("ready");
+      onIdentityReady?.();
       return {
         user: null as AppUser | null,
         isAdmin: false,
@@ -359,6 +363,8 @@ export function AppProvider({ children }: PropsWithChildren) {
       setUser(fallbackUser);
       setCurrentPlan(fallbackStats.currentPlan);
       setStats(fallbackStats);
+      setProtectedDataState("error");
+      onIdentityReady?.();
       return {
         user: fallbackUser,
         isAdmin: fallbackUser.isAdmin,
@@ -379,6 +385,7 @@ export function AppProvider({ children }: PropsWithChildren) {
     setUser(loaded.user);
     setCurrentPlan(loaded.stats.currentPlan);
     setStats(loaded.stats);
+    onIdentityReady?.();
 
     setProtectedDataState("loading");
     const [requestsResult, paymentRequestsResult, personalRequestsResult, adminUsersResult, favoritesResult, contactMessagesResult] = await Promise.all([
@@ -388,7 +395,7 @@ export function AppProvider({ children }: PropsWithChildren) {
         userEmail: sessionUser.email ?? "",
         includeAll: loaded.user.isAdmin,
       }),
-      fetchAdminUsers(),
+      loaded.user.isAdmin ? fetchAdminUsers() : Promise.resolve({ data: [] as AdminUserRecord[], error: null }),
       fetchFavorites(sessionUser.id),
       fetchContactMessages(),
     ]);
@@ -435,7 +442,9 @@ export function AppProvider({ children }: PropsWithChildren) {
       activeHydrationKey = nextSessionKey;
       setAuthReady(false);
 
-      const hydration = applySessionState(nextSession)
+      const hydration = applySessionState(nextSession, () => {
+        if (!disposed && generation === hydrationGeneration) setAuthReady(true);
+      })
         .catch(() => {
           if (generation === hydrationGeneration) {
             setProtectedDataState("error");
@@ -464,33 +473,26 @@ export function AppProvider({ children }: PropsWithChildren) {
 
     void (async () => {
       setPublicContentState("loading");
-      try {
-        const [analysesResult, biasesResult, reviewsResult, altcoinsResult] = await Promise.all([
-          fetchDailyAnalyses(),
-          fetchDailyBiases(),
-          fetchAfterActionReviews(),
-          fetchAltcoinPosts(),
-        ]);
-
-        if (!analysesResult.error && analysesResult.data) {
-          setAnalysisState(analysesResult.data);
+      const settle = async <T,>(key: keyof PublicContentStates, request: PromiseLike<{ data: T[] | null; error: unknown }>, update: (data: T[]) => void) => {
+        try {
+          const result = await request;
+          if (!disposed) {
+            if (!result.error && result.data) update(result.data);
+            setPublicContentStates((previous) => ({ ...previous, [key]: result.error ? "error" : "ready" }));
+          }
+          return result;
+        } catch (error) {
+          if (!disposed) setPublicContentStates((previous) => ({ ...previous, [key]: "error" }));
+          return { error };
         }
-
-        if (!biasesResult.error && biasesResult.data) {
-          setDailyBiasState(biasesResult.data);
-        }
-
-        if (!reviewsResult.error && reviewsResult.data) {
-          setReviewState(reviewsResult.data);
-        }
-
-        if (!altcoinsResult.error && altcoinsResult.data) {
-          setAltcoinPostState(altcoinsResult.data);
-        }
-        setPublicContentState(resolveDataLoadState([analysesResult, biasesResult, reviewsResult, altcoinsResult]));
-      } catch {
-        setPublicContentState("error");
-      }
+      };
+      const results = await Promise.all([
+        settle("analyses", fetchDailyAnalyses(), setAnalysisState),
+        settle("biases", fetchDailyBiases(), setDailyBiasState),
+        settle("reviews", fetchAfterActionReviews(), setReviewState),
+        settle("altcoins", fetchAltcoinPosts(), setAltcoinPostState),
+      ]);
+      if (!disposed) setPublicContentState(resolveDataLoadState(results));
     })();
 
     void (async () => {
@@ -705,6 +707,7 @@ export function AppProvider({ children }: PropsWithChildren) {
       user,
       authReady,
       publicContentState,
+      publicContentStates,
       protectedDataState,
       isAuthenticated: Boolean(session?.user),
       membership,
@@ -1957,6 +1960,7 @@ export function AppProvider({ children }: PropsWithChildren) {
       session,
       authReady,
       publicContentState,
+      publicContentStates,
       protectedDataState,
       analysisState,
       dailyBiasState,

@@ -12,6 +12,7 @@ type AnalysisRequestRow = {
   status: RequestStatus;
   delivery_type: "text" | "video";
   payment_status: PaymentStatus;
+  stripe_checkout_id: string | null;
   payment_proof: string | null;
   payment_reference: string | null;
   delivery_notes: string | null;
@@ -38,6 +39,7 @@ function mapRequest(row: AnalysisRequestRow): AnalysisRequest {
     status: row.status,
     deliveryType: row.delivery_type,
     paymentStatus: row.payment_status,
+    stripeCheckoutId: row.stripe_checkout_id ?? undefined,
     paymentProof: row.payment_proof ?? undefined,
     paymentReference: row.payment_reference ?? undefined,
     adminNotes: row.admin_notes ?? undefined,
@@ -56,7 +58,7 @@ export async function fetchAnalysisRequests() {
   const result = await supabase
     .from("analysis_requests")
     .select(
-      "id, user_id, requester_email, asset_input, coin_symbol, tier, notes, status, delivery_type, payment_status, payment_proof, payment_reference, delivery_notes, delivery_video_url, admin_notes, delivery_url, requested_at, fulfilled_at, delivered_at, updated_at, created_at",
+      "id, user_id, requester_email, asset_input, coin_symbol, tier, notes, status, delivery_type, payment_status, stripe_checkout_id, payment_proof, payment_reference, delivery_notes, delivery_video_url, admin_notes, delivery_url, requested_at, fulfilled_at, delivered_at, updated_at, created_at",
     )
     .order("created_at", { ascending: false });
 
@@ -91,7 +93,7 @@ export async function createAnalysisRequest(input: {
     .from("analysis_requests")
     .insert(payload)
     .select(
-      "id, user_id, requester_email, asset_input, coin_symbol, tier, notes, status, delivery_type, payment_status, payment_proof, payment_reference, delivery_notes, delivery_video_url, admin_notes, delivery_url, requested_at, fulfilled_at, delivered_at, updated_at, created_at",
+      "id, user_id, requester_email, asset_input, coin_symbol, tier, notes, status, delivery_type, payment_status, stripe_checkout_id, payment_proof, payment_reference, delivery_notes, delivery_video_url, admin_notes, delivery_url, requested_at, fulfilled_at, delivered_at, updated_at, created_at",
     )
     .single();
 
@@ -129,7 +131,7 @@ export async function updateAnalysisRequest(
     .update(payload)
     .eq("id", requestId)
     .select(
-      "id, user_id, requester_email, asset_input, coin_symbol, tier, notes, status, delivery_type, payment_status, payment_proof, payment_reference, delivery_notes, delivery_video_url, admin_notes, delivery_url, requested_at, fulfilled_at, delivered_at, updated_at, created_at",
+      "id, user_id, requester_email, asset_input, coin_symbol, tier, notes, status, delivery_type, payment_status, stripe_checkout_id, payment_proof, payment_reference, delivery_notes, delivery_video_url, admin_notes, delivery_url, requested_at, fulfilled_at, delivered_at, updated_at, created_at",
     )
     .maybeSingle();
 

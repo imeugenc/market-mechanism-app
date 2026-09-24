@@ -7,7 +7,7 @@ import { Market } from "@/types/domain";
 import { colors, radii, typography } from "@/theme";
 import { useResponsiveWeb } from "@/hooks/useResponsiveWeb";
 
-export function MarketCard({ market, latestPublishedAt }: { market: Market; latestPublishedAt?: string }) {
+export function MarketCard({ market, latestPublishedAt, contentStatus = "ready" }: { market: Market; latestPublishedAt?: string; contentStatus?: "loading" | "error" | "ready" }) {
   const { isCompactWeb } = useResponsiveWeb();
 
   return (
@@ -17,7 +17,7 @@ export function MarketCard({ market, latestPublishedAt }: { market: Market; late
     >
       <View style={styles.topRow}>
         <Text style={styles.market}>{market}</Text>
-        <Text style={styles.status}>{latestPublishedAt ? `Ultima actualizare · ${formatDate(latestPublishedAt)}` : "Fără conținut publicat încă"}</Text>
+        <Text style={styles.status}>{latestPublishedAt ? `Ultima actualizare · ${formatDate(latestPublishedAt)}` : contentStatus === "loading" ? "Se verifică actualizările" : contentStatus === "error" ? "Actualizări indisponibile" : "Fără conținut publicat încă"}</Text>
       </View>
       <Text style={styles.description}>{MARKET_DESCRIPTIONS[market]}</Text>
       <View style={styles.badge}>

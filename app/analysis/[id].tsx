@@ -13,12 +13,12 @@ import { colors, radii, spacing, typography } from "@/theme";
 
 export default function AnalysisDetailScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const { analyses, favorites, membership, publicContentState, toggleFavorite, trackView } = useAppState();
+  const { analyses, favorites, membership, publicContentStates, toggleFavorite, trackView } = useAppState();
   const clientReady = useClientReady();
   const item = analyses.find((analysis) => analysis.id === id);
 
-  if (!clientReady || publicContentState === "loading") return <Screen><ContentStatePanel kind="loading" /></Screen>;
-  if (publicContentState === "error") return <Screen><ContentStatePanel kind="error" /></Screen>;
+  if (!clientReady || publicContentStates.analyses === "loading") return <Screen><ContentStatePanel kind="loading" /></Screen>;
+  if (publicContentStates.analyses === "error") return <Screen><ContentStatePanel kind="error" /></Screen>;
   if (!item) return <Screen><ContentStatePanel kind="removed" /><PrimaryButton label="Înapoi la Favorite" onPress={() => router.replace("/favorites" as Href)} /></Screen>;
 
   const locked = !canAccessPremiumContent(membership.currentPlan, item);

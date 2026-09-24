@@ -11,18 +11,18 @@ import { useAppState } from "@/providers/AppProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 
 export function AltcoinsScreen() {
-  const { altcoinPosts, membership, publicContentState } = useAppState();
+  const { altcoinPosts, membership, publicContentStates } = useAppState();
+  const contentState = publicContentStates.altcoins;
   const posts = sortNewest(altcoinPosts);
 
   return (
     <Screen>
       <Pressable onPress={() => router.replace("/(tabs)/markets")}><Text style={styles.back}>‹ Piețe</Text></Pressable>
       <SectionHeader eyebrow="Editorial" title="Altcoins" caption="Actualizări punctuale pentru oportunități din afara BTC, ETH, NQ și ES." />
-      {publicContentState === "loading" ? <ContentStatePanel kind="loading" /> : null}
-      {publicContentState === "error" ? <ContentStatePanel kind="error" /> : null}
-      {publicContentState === "partial" ? <ContentStatePanel kind="error" title="Fluxul Altcoins poate fi incomplet" compact /> : null}
-      {publicContentState !== "loading" && publicContentState !== "error" && !posts.length ? <ContentStatePanel kind="empty" title="Nu există încă postări Altcoins" message="Prima actualizare publicată va apărea aici automat." /> : null}
-      {publicContentState !== "loading" && publicContentState !== "error" ? <View style={styles.list}>{posts.map((item) => {
+      {contentState === "loading" ? <ContentStatePanel kind="loading" /> : null}
+      {contentState === "error" ? <ContentStatePanel kind="error" /> : null}
+      {contentState === "ready" && !posts.length ? <ContentStatePanel kind="empty" title="Nu există încă postări Altcoins" message="Prima actualizare publicată va apărea aici automat." /> : null}
+      {contentState === "ready" ? <View style={styles.list}>{posts.map((item) => {
         const locked = item.isPremium && membership.currentPlan === "FREE";
         return <Pressable key={item.id} style={styles.card} onPress={() => router.push(`/altcoin/${item.id}` as Href)}>
           <View style={styles.top}><Text style={styles.coin}>{item.coinSymbol}</Text><Text style={styles.date}>{formatDailyLabel(item.publishedAt)}</Text></View>

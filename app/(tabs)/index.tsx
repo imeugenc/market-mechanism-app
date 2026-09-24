@@ -21,11 +21,14 @@ import { colors, radii, spacing, typography } from "@/theme";
 export default function HomeScreen() {
   const {
     analyses, dailyBiases, favorites, hasCompletedOnboarding, membership, onboardingReady,
-    publicContentState, reviews, toggleFavorite, user,
+    publicContentState, publicContentStates, reviews, toggleFavorite, user,
   } = useAppState();
   const latestBiases = sortNewest(dailyBiases).slice(0, 4);
   const latestReview = sortNewest(reviews)[0];
   const latestBriefing = latestAnalysisByMarket(analyses)[0];
+  const marketStates = [publicContentStates.biases, publicContentStates.reviews, publicContentStates.analyses];
+  const marketContentStatus = marketStates.some((state) => state === "loading") ? "loading" : marketStates.every((state) => state === "error") ? "error" : "ready";
+  const confidenceText = { Low: "scăzută", Medium: "medie", High: "ridicată" } as const;
 
   useEffect(() => {
     if (onboardingReady && !hasCompletedOnboarding) router.replace("/onboarding");
@@ -48,28 +51,24 @@ export default function HomeScreen() {
         <Text style={styles.welcomeBody}>Cele mai recente Bias-uri, review-uri și briefinguri, fără zgomot inutil.</Text>
       </View>
 
-      {publicContentState === "loading" ? <ContentStatePanel kind="loading" /> : null}
-      {publicContentState === "error" ? <ContentStatePanel kind="error" /> : null}
       {publicContentState === "partial" ? <ContentStatePanel kind="error" title="O parte din conținut nu s-a încărcat" message="Conținutul disponibil este afișat mai jos." compact /> : null}
-
-      {publicContentState !== "loading" && publicContentState !== "error" ? (
-        <>
+      {publicContentState === "error" ? <ContentStatePanel kind="error" /> : null}
           <SectionHeader eyebrow="Acum" title="Context recent" />
           <View style={styles.focusGrid}>
             <Pressable style={[styles.focusCard, styles.focusCardPrimary]} onPress={() => latestBiases[0] && router.push(`/bias/${latestBiases[0].id}` as Href)}>
               <View style={styles.focusTop}><MaterialCommunityIcons name="crosshairs-gps" color={colors.gold} size={20} /><Text style={styles.focusMeta}>{latestBiases[0]?.market ?? "DAILY BIAS"}</Text></View>
-              <Text style={styles.focusTitle}>{latestBiases[0] ? `${latestBiases[0].forecastedBias} · ${latestBiases[0].confidence}` : "Niciun Daily Bias publicat"}</Text>
-              <Text style={styles.focusBody}>{latestBiases[0] ? formatDailyLabel(latestBiases[0].publishedAt) : "Primul Bias publicat va apărea aici."}</Text>
+              <Text style={styles.focusTitle}>{latestBiases[0] ? `${latestBiases[0].forecastedBias} · Încredere ${confidenceText[latestBiases[0].confidence]}` : publicContentStates.biases === "loading" ? "Se încarcă Daily Bias…" : publicContentStates.biases === "error" ? "Daily Bias indisponibil" : "Niciun Daily Bias publicat"}</Text>
+              <Text style={styles.focusBody}>{latestBiases[0] ? formatDailyLabel(latestBiases[0].publishedAt) : publicContentStates.biases === "ready" ? "Primul Bias publicat va apărea aici." : "Verificăm informația curentă."}</Text>
             </Pressable>
             <Pressable style={styles.focusCard} onPress={() => latestReview && router.push(`/review/${latestReview.id}` as Href)}>
               <View style={styles.focusTop}><MaterialCommunityIcons name="school-outline" color={colors.success} size={20} /><Text style={styles.focusMeta}>AAR GRATUIT</Text></View>
-              <Text style={styles.focusTitle}>{latestReview?.title ?? "Niciun AAR disponibil încă"}</Text>
-              <Text style={styles.focusBody}>{latestReview ? `${latestReview.market} · ${formatDailyLabel(latestReview.publishedAt)}` : "Review-urile publice vor apărea aici."}</Text>
+              <Text style={styles.focusTitle}>{latestReview?.title ?? (publicContentStates.reviews === "loading" ? "Se încarcă AAR…" : publicContentStates.reviews === "error" ? "AAR indisponibil" : "Niciun AAR disponibil încă")}</Text>
+              <Text style={styles.focusBody}>{latestReview ? `${latestReview.market} · ${formatDailyLabel(latestReview.publishedAt)}` : publicContentStates.reviews === "loading" ? "Verificăm ultimul review." : publicContentStates.reviews === "error" ? "Încearcă din nou mai târziu." : "Review-urile publice vor apărea aici."}</Text>
             </Pressable>
             <Pressable style={styles.focusCard} onPress={() => latestBriefing && router.push(isPremiumLocked(membership.currentPlan, latestBriefing) ? "/(tabs)/membership" : `/(tabs)/markets/${latestBriefing.market}`)}>
               <View style={styles.focusTop}><MaterialCommunityIcons name="play-circle-outline" color={colors.goldBright} size={20} /><Text style={styles.focusMeta}>BRIEFING PREMIUM</Text></View>
-              <Text style={styles.focusTitle}>{latestBriefing?.title ?? "Niciun briefing publicat"}</Text>
-              <Text style={styles.focusBody}>{latestBriefing ? `${latestBriefing.market} · ${isPublishedToday(latestBriefing.publishedAt) ? "Publicat astăzi" : `Ultimul: ${formatDailyLabel(latestBriefing.publishedAt)}`}` : "Nu există încă un briefing disponibil."}</Text>
+              <Text style={styles.focusTitle}>{latestBriefing?.title ?? (publicContentStates.analyses === "loading" ? "Se încarcă briefingul…" : publicContentStates.analyses === "error" ? "Briefing indisponibil" : "Niciun briefing publicat")}</Text>
+              <Text style={styles.focusBody}>{latestBriefing ? `${latestBriefing.market} · ${isPublishedToday(latestBriefing.publishedAt) ? "Publicat astăzi" : `Ultimul: ${formatDailyLabel(latestBriefing.publishedAt)}`}` : publicContentStates.analyses === "loading" ? "Verificăm ultimul briefing." : publicContentStates.analyses === "error" ? "Încearcă din nou mai târziu." : "Nu există încă un briefing disponibil."}</Text>
             </Pressable>
           </View>
 
@@ -82,24 +81,22 @@ export default function HomeScreen() {
           <View style={styles.marketGrid}>
             {CORE_MARKETS.map((market) => {
               const newest = sortNewest([...analyses.filter((item) => item.market === market), ...dailyBiases.filter((item) => item.market === market), ...reviews.filter((item) => item.market === market)])[0];
-              return <MarketCard key={market} market={market} latestPublishedAt={newest?.publishedAt} />;
+              return <MarketCard key={market} market={market} latestPublishedAt={newest?.publishedAt} contentStatus={marketContentStatus} />;
             })}
           </View>
 
           <SectionHeader eyebrow="Daily Bias" title="Cele mai recente" caption="Direcție, încredere și rezultat păstrate în contextul fiecărei piețe." />
-          {latestBiases.length ? <View style={styles.list}>{latestBiases.map((bias) => (
+          {publicContentStates.biases === "loading" ? <ContentStatePanel kind="loading" title="Se încarcă Daily Bias…" compact /> : publicContentStates.biases === "error" ? <ContentStatePanel kind="error" title="Daily Bias nu s-a încărcat" compact /> : latestBiases.length ? <View style={styles.list}>{latestBiases.map((bias) => (
             <Pressable key={bias.id} style={styles.rowCard} onPress={() => router.push(`/bias/${bias.id}` as Href)}>
               <View style={styles.rowTop}><Text style={styles.rowMarket}>{bias.market}</Text><Text style={styles.rowDate}>{formatDailyLabel(bias.publishedAt)}</Text></View>
-              <Text style={styles.rowTitle}>{bias.forecastedBias} · {bias.confidence}</Text>
+              <Text style={styles.rowTitle}>{bias.forecastedBias} · Încredere {confidenceText[bias.confidence]}</Text>
               <Text style={styles.rowBody} numberOfLines={2}>{bias.notes}</Text>
               <Text style={styles.rowOutcome}>{bias.outcome === "Pending" ? "Rezultat în așteptare" : `Rezultat: ${bias.outcome}`}</Text>
             </Pressable>
           ))}</View> : <ContentStatePanel kind="empty" title="Nu există încă Daily Bias publicat" />}
 
           <SectionHeader eyebrow="Educație gratuită" title="Ultimul After Action Review" />
-          {latestReview ? <ReviewCard item={latestReview} favorited={favorites.some((item) => item.contentType === "review" && item.contentId === latestReview.id)} onToggleFavorite={() => void toggleFavorite({ contentType: "review", contentId: latestReview.id, title: latestReview.title, subtitle: latestReview.shortText, marketLabel: latestReview.market })} /> : <ContentStatePanel kind="empty" title="Nu există încă un AAR disponibil" message="Primul review public va apărea aici automat." />}
-        </>
-      ) : null}
+          {publicContentStates.reviews === "loading" ? <ContentStatePanel kind="loading" title="Se încarcă AAR…" compact /> : publicContentStates.reviews === "error" ? <ContentStatePanel kind="error" title="AAR nu s-a încărcat" compact /> : latestReview ? <ReviewCard item={latestReview} favorited={favorites.some((item) => item.contentType === "review" && item.contentId === latestReview.id)} onToggleFavorite={() => void toggleFavorite({ contentType: "review", contentId: latestReview.id, title: latestReview.title, subtitle: latestReview.shortText, marketLabel: latestReview.market })} /> : <ContentStatePanel kind="empty" title="Nu există încă un AAR disponibil" message="Primul review public va apărea aici automat." />}
 
       <View style={styles.progressCard}>
         <View><Text style={styles.progressEyebrow}>PROGRES</Text><Text style={styles.progressTitle}>{displayRank(membership.currentRank)}</Text></View>
