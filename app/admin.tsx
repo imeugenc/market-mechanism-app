@@ -88,6 +88,10 @@ export default function AdminScreen() {
   const [biasNotes, setBiasNotes] = useState("");
   const [biasChartImage, setBiasChartImage] = useState("");
   const [biasVideoUrl, setBiasVideoUrl] = useState("");
+  const [biasTradingDate, setBiasTradingDate] = useState("");
+  const [biasLiquidityTarget, setBiasLiquidityTarget] = useState("");
+  const [biasTradingviewUrl, setBiasTradingviewUrl] = useState("");
+  const [biasThumbnailUrl, setBiasThumbnailUrl] = useState("");
   const [biasRelatedReviewId, setBiasRelatedReviewId] = useState<string | undefined>();
   const [biasDate, setBiasDate] = useState(() => currentIsoValue());
   const [editingBiasId, setEditingBiasId] = useState<string | null>(null);
@@ -103,6 +107,8 @@ export default function AdminScreen() {
   const [reviewBodyText, setReviewBodyText] = useState("");
   const [reviewImageUrl, setReviewImageUrl] = useState("");
   const [reviewVideoUrl, setReviewVideoUrl] = useState("");
+  const [reviewTradingviewUrl, setReviewTradingviewUrl] = useState("");
+  const [reviewThumbnailUrl, setReviewThumbnailUrl] = useState("");
   const [reviewDate, setReviewDate] = useState(() => currentIsoValue());
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
   const [reviewRelatedBiasId, setReviewRelatedBiasId] = useState<string | undefined>();
@@ -111,6 +117,9 @@ export default function AdminScreen() {
   const [altcoinSummary, setAltcoinSummary] = useState("");
   const [altcoinBody, setAltcoinBody] = useState("");
   const [altcoinVideoUrl, setAltcoinVideoUrl] = useState("");
+  const [altcoinChartImage, setAltcoinChartImage] = useState("");
+  const [altcoinTradingviewUrl, setAltcoinTradingviewUrl] = useState("");
+  const [altcoinThumbnailUrl, setAltcoinThumbnailUrl] = useState("");
   const [altcoinPublishDate, setAltcoinPublishDate] = useState(() => currentIsoValue());
   const [altcoinPremium, setAltcoinPremium] = useState(false);
   const [editingAltcoinId, setEditingAltcoinId] = useState<string | null>(null);
@@ -273,6 +282,8 @@ export default function AdminScreen() {
     setReviewBodyText(review.bodyText ?? review.shortText);
     setReviewImageUrl(review.chartImage);
     setReviewVideoUrl(review.videoUrl ?? "");
+    setReviewTradingviewUrl(review.tradingviewUrl ?? "");
+    setReviewThumbnailUrl(review.thumbnailUrl ?? "");
     setReviewDate(review.publishedAt);
     setReviewRelatedBiasId(dailyBiases.find((item) => item.relatedReviewId === review.id)?.id);
   };
@@ -291,6 +302,10 @@ export default function AdminScreen() {
       notes: bias.notes,
       chartImage: bias.chartImage,
       videoUrl: bias.videoUrl,
+      tradingDate: bias.tradingDate,
+      liquidityTarget: bias.liquidityTarget,
+      tradingviewUrl: bias.tradingviewUrl,
+      thumbnailUrl: bias.thumbnailUrl,
       relatedReviewId: reviewId,
       publishedAt: bias.publishedAt,
     });
@@ -314,6 +329,8 @@ export default function AdminScreen() {
       bodyText: reviewBodyText.trim(),
       chartImage: reviewImageUrl.trim(),
       videoUrl: reviewVideoUrl.trim(),
+      tradingviewUrl: reviewTradingviewUrl.trim(),
+      thumbnailUrl: reviewThumbnailUrl.trim(),
       publishedAt: normalizeIsoDate(reviewDate),
     };
 
@@ -358,6 +375,10 @@ export default function AdminScreen() {
     setBiasNotes(bias.notes);
     setBiasChartImage(bias.chartImage ?? "");
     setBiasVideoUrl(bias.videoUrl ?? "");
+    setBiasTradingDate(bias.tradingDate ?? "");
+    setBiasLiquidityTarget(bias.liquidityTarget ?? "");
+    setBiasTradingviewUrl(bias.tradingviewUrl ?? "");
+    setBiasThumbnailUrl(bias.thumbnailUrl ?? "");
     setBiasRelatedReviewId(bias.relatedReviewId);
     setBiasDate(bias.publishedAt);
   };
@@ -371,6 +392,10 @@ export default function AdminScreen() {
     setBiasNotes("");
     setBiasChartImage("");
     setBiasVideoUrl("");
+    setBiasTradingDate("");
+    setBiasLiquidityTarget("");
+    setBiasTradingviewUrl("");
+    setBiasThumbnailUrl("");
     setBiasRelatedReviewId(undefined);
     setBiasDate(currentIsoValue());
   };
@@ -402,6 +427,9 @@ export default function AdminScreen() {
     setAltcoinSummary(post.summary);
     setAltcoinBody(post.bodyText);
     setAltcoinVideoUrl(post.videoUrl ?? "");
+    setAltcoinChartImage(post.chartImage ?? "");
+    setAltcoinTradingviewUrl(post.tradingviewUrl ?? "");
+    setAltcoinThumbnailUrl(post.thumbnailUrl ?? "");
     setAltcoinPublishDate(post.publishedAt);
     setAltcoinPremium(post.isPremium);
   };
@@ -544,6 +572,11 @@ export default function AdminScreen() {
             <Text style={styles.label}>Context</Text>
             <TextInput value={biasNotes} onChangeText={setBiasNotes} style={[styles.input, styles.notes]} placeholder="Contextul și condițiile acestui bias" placeholderTextColor="#6F6A5C" multiline />
 
+            <Text style={styles.label}>Data sesiunii</Text>
+            <TextInput value={biasTradingDate} onChangeText={setBiasTradingDate} style={styles.input} placeholder="YYYY-MM-DD" placeholderTextColor="#6F6A5C" />
+            <Text style={styles.label}>Țintă de lichiditate</Text>
+            <TextInput value={biasLiquidityTarget} onChangeText={setBiasLiquidityTarget} style={styles.input} placeholderTextColor="#6F6A5C" />
+
             <Text style={styles.label}>Screenshot TradingView</Text>
             <TextInput
               value={biasChartImage}
@@ -557,6 +590,9 @@ export default function AdminScreen() {
               <Image source={{ uri: sanitizeRemoteImageUrl(biasChartImage) }} style={styles.biasImagePreview} />
             ) : null}
 
+            <Text style={styles.label}>Link TradingView</Text>
+            <TextInput value={biasTradingviewUrl} onChangeText={setBiasTradingviewUrl} style={styles.input} placeholder="https://..." placeholderTextColor="#6F6A5C" autoCapitalize="none" />
+
             <Text style={styles.label}>URL video opțional</Text>
             <TextInput
               value={biasVideoUrl}
@@ -566,6 +602,8 @@ export default function AdminScreen() {
               placeholderTextColor="#6F6A5C"
               autoCapitalize="none"
             />
+            <Text style={styles.label}>Thumbnail video</Text>
+            <TextInput value={biasThumbnailUrl} onChangeText={setBiasThumbnailUrl} style={styles.input} placeholder="https://... imagine publică" placeholderTextColor="#6F6A5C" autoCapitalize="none" />
 
             <Text style={styles.label}>After Action Review asociat</Text>
             <View style={styles.statusSelector}>
@@ -595,6 +633,10 @@ export default function AdminScreen() {
                   notes: biasNotes.trim(),
                   chartImage: sanitizeRemoteImageUrl(biasChartImage),
                   videoUrl: biasVideoUrl.trim(),
+                  tradingDate: biasTradingDate.trim(),
+                  liquidityTarget: biasLiquidityTarget.trim(),
+                  tradingviewUrl: biasTradingviewUrl.trim(),
+                  thumbnailUrl: biasThumbnailUrl.trim(),
                   relatedReviewId: biasRelatedReviewId,
                   publishedAt: normalizeIsoDate(biasDate),
                 };
@@ -857,9 +899,13 @@ export default function AdminScreen() {
 
         <Text style={styles.label}>Imagine chart</Text>
         <TextInput value={reviewImageUrl} onChangeText={setReviewImageUrl} style={styles.input} placeholderTextColor="#6F6A5C" />
+        <Text style={styles.label}>Link TradingView</Text>
+        <TextInput value={reviewTradingviewUrl} onChangeText={setReviewTradingviewUrl} style={styles.input} placeholderTextColor="#6F6A5C" autoCapitalize="none" />
 
         <Text style={styles.label}>URL video opțional</Text>
         <TextInput value={reviewVideoUrl} onChangeText={setReviewVideoUrl} style={styles.input} placeholderTextColor="#6F6A5C" />
+        <Text style={styles.label}>Thumbnail public</Text>
+        <TextInput value={reviewThumbnailUrl} onChangeText={setReviewThumbnailUrl} style={styles.input} placeholderTextColor="#6F6A5C" autoCapitalize="none" />
 
         <Text style={styles.label}>Dată publicare</Text>
         <TextInput value={reviewDate} onChangeText={setReviewDate} style={styles.input} placeholderTextColor="#6F6A5C" />
@@ -891,6 +937,8 @@ export default function AdminScreen() {
               setReviewTitle("");
               setReviewText("");
               setReviewBodyText("");
+              setReviewTradingviewUrl("");
+              setReviewThumbnailUrl("");
               setReviewImageUrl("");
               setReviewVideoUrl("");
               setReviewDate(currentIsoValue());
@@ -932,6 +980,12 @@ export default function AdminScreen() {
 
         <Text style={styles.label}>URL video</Text>
         <TextInput value={altcoinVideoUrl} onChangeText={setAltcoinVideoUrl} style={styles.input} placeholderTextColor="#6F6A5C" />
+        <Text style={styles.label}>Imagine chart</Text>
+        <TextInput value={altcoinChartImage} onChangeText={setAltcoinChartImage} style={styles.input} placeholderTextColor="#6F6A5C" autoCapitalize="none" />
+        <Text style={styles.label}>Link TradingView</Text>
+        <TextInput value={altcoinTradingviewUrl} onChangeText={setAltcoinTradingviewUrl} style={styles.input} placeholderTextColor="#6F6A5C" autoCapitalize="none" />
+        <Text style={styles.label}>Thumbnail public</Text>
+        <TextInput value={altcoinThumbnailUrl} onChangeText={setAltcoinThumbnailUrl} style={styles.input} placeholderTextColor="#6F6A5C" autoCapitalize="none" />
 
         <Text style={styles.label}>Dată publicare</Text>
         <TextInput value={altcoinPublishDate} onChangeText={setAltcoinPublishDate} style={styles.input} placeholderTextColor="#6F6A5C" />
@@ -950,8 +1004,10 @@ export default function AdminScreen() {
                   title: altcoinTitle.trim(),
                   summary: altcoinSummary.trim(),
                   bodyText: altcoinBody.trim(),
-                  chartImage: "",
+                  chartImage: altcoinChartImage.trim(),
                   videoUrl: altcoinVideoUrl.trim(),
+                  tradingviewUrl: altcoinTradingviewUrl.trim(),
+                  thumbnailUrl: altcoinThumbnailUrl.trim(),
                   isPremium: altcoinPremium,
                   publishedAt: normalizeIsoDate(altcoinPublishDate),
                 })
@@ -960,8 +1016,10 @@ export default function AdminScreen() {
                   title: altcoinTitle.trim(),
                   summary: altcoinSummary.trim(),
                   bodyText: altcoinBody.trim(),
-                  chartImage: "",
+                  chartImage: altcoinChartImage.trim(),
                   videoUrl: altcoinVideoUrl.trim(),
+                  tradingviewUrl: altcoinTradingviewUrl.trim(),
+                  thumbnailUrl: altcoinThumbnailUrl.trim(),
                   isPremium: altcoinPremium,
                   publishedAt: normalizeIsoDate(altcoinPublishDate),
                 })
@@ -978,6 +1036,9 @@ export default function AdminScreen() {
               setAltcoinSummary("");
               setAltcoinBody("");
               setAltcoinVideoUrl("");
+              setAltcoinChartImage("");
+              setAltcoinTradingviewUrl("");
+              setAltcoinThumbnailUrl("");
               setAltcoinPublishDate(currentIsoValue());
               setAltcoinPremium(false);
             }}
@@ -1005,6 +1066,7 @@ export default function AdminScreen() {
               {expandedContent[`bias-${bias.id}`] ? (
                 <>
                   <Text style={styles.itemMeta}>{formatDate(bias.publishedAt)} • {bias.confidence} • {bias.outcome}</Text>
+                  {bias.externalSourceId ? <Text style={styles.helperText}>Source: MM Edge Journal</Text> : null}
                   <Text style={styles.requestNotes}>{bias.notes}</Text>
                   {bias.relatedReviewId ? <Text style={styles.helperText}>AAR conectat: {reviews.find((item) => item.id === bias.relatedReviewId)?.title ?? "Review indisponibil"}</Text> : null}
                   <View style={styles.actionButtons}>
@@ -1057,6 +1119,7 @@ export default function AdminScreen() {
               {expandedContent[`review-${review.id}`] ? (
                 <>
                   <Text style={styles.itemMeta}>{formatDate(review.publishedAt)} • GRATUIT</Text>
+                  {review.externalSourceId ? <Text style={styles.helperText}>Source: MM Edge Journal</Text> : null}
                   <Text style={styles.requestNotes}>{review.shortText}</Text>
                   <View style={styles.actionButtons}>
                     <PrimaryButton label="Editează" variant="ghost" onPress={() => { startReviewEdit(review.id); setActiveComposer("aar"); }} />
@@ -1079,6 +1142,7 @@ export default function AdminScreen() {
               {expandedContent[`altcoin-${post.id}`] ? (
                 <>
                   <Text style={styles.itemMeta}>{post.isPremium ? "PREMIUM" : "GRATUIT"} • {formatDate(post.publishedAt)}</Text>
+                  {post.externalSourceId ? <Text style={styles.helperText}>Source: MM Edge Journal</Text> : null}
                   {post.summary ? <Text style={styles.requestNotes}>{post.summary}</Text> : null}
                   <View style={styles.actionButtons}>
                     <PrimaryButton label="Editează" variant="ghost" onPress={() => { startAltcoinEdit(post.id); setActiveComposer("altcoins"); }} />

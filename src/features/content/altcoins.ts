@@ -14,6 +14,9 @@ type AltcoinPostRow = {
   is_premium: boolean | null;
   published_at: string | null;
   created_at: string | null;
+  tradingview_url: string | null;
+  thumbnail_url: string | null;
+  external_source_id: string | null;
 };
 
 function mapAltcoinPost(row: AltcoinPostRow): AltcoinPost {
@@ -29,13 +32,16 @@ function mapAltcoinPost(row: AltcoinPostRow): AltcoinPost {
     videoUrl: row.video_url ?? undefined,
     isPremium: row.is_premium ?? false,
     publishedAt: normalizeIsoDate(row.published_at, fallbackDate),
+    tradingviewUrl: row.tradingview_url ?? undefined,
+    thumbnailUrl: row.thumbnail_url ?? undefined,
+    externalSourceId: row.external_source_id ?? undefined,
   };
 }
 
 export async function fetchAltcoinPosts() {
   const result = await supabase
     .from("altcoin_posts")
-    .select("id, coin_symbol, title, summary, body_text, chart_image, video_url, is_premium, published_at, created_at")
+    .select("id, coin_symbol, title, summary, body_text, chart_image, video_url, is_premium, published_at, created_at, tradingview_url, thumbnail_url, external_source_id")
     .order("published_at", { ascending: false });
 
   return {
@@ -51,6 +57,8 @@ export async function publishAltcoinPost(input: {
   body_text: string;
   chart_image?: string;
   video_url?: string;
+  tradingview_url?: string;
+  thumbnail_url?: string;
   is_premium: boolean;
   published_at?: string;
 }) {
@@ -60,8 +68,10 @@ export async function publishAltcoinPost(input: {
       ...input,
       chart_image: sanitizeRemoteImageUrl(input.chart_image),
       published_at: normalizeIsoDate(input.published_at),
+      tradingview_url: input.tradingview_url || null,
+      thumbnail_url: input.thumbnail_url || null,
     })
-    .select("id, coin_symbol, title, summary, body_text, chart_image, video_url, is_premium, published_at, created_at")
+    .select("id, coin_symbol, title, summary, body_text, chart_image, video_url, is_premium, published_at, created_at, tradingview_url, thumbnail_url, external_source_id")
     .single();
 
   return {
@@ -79,6 +89,8 @@ export async function updateAltcoinPost(
     body_text: string;
     chart_image?: string;
     video_url?: string;
+    tradingview_url?: string;
+    thumbnail_url?: string;
     is_premium: boolean;
     published_at?: string;
   },
@@ -88,10 +100,12 @@ export async function updateAltcoinPost(
     .update({
       ...input,
       chart_image: sanitizeRemoteImageUrl(input.chart_image),
+      ...(input.tradingview_url !== undefined ? { tradingview_url: input.tradingview_url || null } : {}),
+      ...(input.thumbnail_url !== undefined ? { thumbnail_url: input.thumbnail_url || null } : {}),
       published_at: normalizeIsoDate(input.published_at),
     })
     .eq("id", postId)
-    .select("id, coin_symbol, title, summary, body_text, chart_image, video_url, is_premium, published_at, created_at")
+    .select("id, coin_symbol, title, summary, body_text, chart_image, video_url, is_premium, published_at, created_at, tradingview_url, thumbnail_url, external_source_id")
     .single();
 
   return {

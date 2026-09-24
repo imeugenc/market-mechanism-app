@@ -1,30 +1,57 @@
+import { useEffect, useState } from "react";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { Image, Linking, StyleSheet, Text, View } from "react-native";
 
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { ContentStatePanel } from "@/components/ContentStatePanel";
 import { Screen } from "@/components/Screen";
+import { fetchDailyBiasById } from "@/features/content/biases";
 import { isPublishedToday } from "@/lib/contentAvailability";
 import { useClientReady } from "@/hooks/useResponsiveWeb";
 import { formatDate } from "@/lib/format";
 import { sanitizeRemoteImageUrl } from "@/lib/media";
 import { useAppState } from "@/providers/AppProvider";
 import { colors, radii, spacing, typography } from "@/theme";
+import type { DailyBias } from "@/types/domain";
+
+type BiasLoad = { id: string; status: "loading" | "ready" | "error"; bias: DailyBias | null };
+
+const directionColors = {
+  Bullish: colors.success,
+  Bearish: colors.danger,
+  Neutral: colors.textStrong,
+  Range: colors.goldBright,
+};
+
+const confidenceLabels = { Low: "Încredere scăzută", Medium: "Încredere medie", High: "Încredere ridicată" };
 
 export default function BiasDetailScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const { dailyBiases, publicContentState, reviews } = useAppState();
+  const { reviews } = useAppState();
   const clientReady = useClientReady();
-  const bias = dailyBiases.find((item) => item.id === id);
-  const chartImage = sanitizeRemoteImageUrl(bias?.chartImage);
+  const [detail, setDetail] = useState<BiasLoad>({ id: "", status: "loading", bias: null });
+  useEffect(() => {
+    if (!id) return;
+    let active = true;
+    setDetail({ id, status: "loading", bias: null });
+    void fetchDailyBiasById(id).then(({ data, error }) => {
+      if (active) setDetail({ id, status: error ? "error" : "ready", bias: data });
+    }).catch(() => {
+      if (active) setDetail({ id, status: "error", bias: null });
+    });
+    return () => { active = false; };
+  }, [id]);
+
+  const bias = detail.id === id ? detail.bias : null;
+  const chartImage = sanitizeRemoteImageUrl(bias?.thumbnailUrl || bias?.chartImage);
   const relatedReview = reviews.find((item) => item.id === bias?.relatedReviewId);
 
-  if (!clientReady || publicContentState === "loading") {
-    return <Screen><ContentStatePanel kind="loading" title="Se încarcă Daily Bias…" /></Screen>;
+  if (!clientReady || !id || detail.id !== id || detail.status === "loading") {
+    return <Screen><Stack.Screen options={{ title: "Daily Bias" }} /><ContentStatePanel kind="loading" title="Se încarcă Daily Bias…" /></Screen>;
   }
 
-  if (publicContentState === "error") {
-    return <Screen><ContentStatePanel kind="error" /></Screen>;
+  if (detail.status === "error") {
+    return <Screen><Stack.Screen options={{ title: "Daily Bias" }} /><ContentStatePanel kind="error" title="Daily Bias nu s-a încărcat" message="Încearcă din nou peste câteva momente." /></Screen>;
   }
 
   if (!bias) {
@@ -44,14 +71,22 @@ export default function BiasDetailScreen() {
         {chartImage ? <Image source={{ uri: chartImage }} style={styles.image} /> : null}
         <Text style={styles.eyebrow}>{isPublishedToday(bias.publishedAt) && bias.outcome === "Pending" ? "BIAS CURENT" : bias.outcome === "Pending" ? "BIAS RECENT" : "BIAS ISTORIC"}</Text>
         <Text style={styles.title}>{bias.market}</Text>
-        <Text style={styles.date}>{formatDate(bias.publishedAt)}</Text>
-        <View style={styles.metaRow}>
-          <Text style={styles.meta}>Bias: {bias.forecastedBias}</Text>
-          <Text style={styles.meta}>Încredere: {bias.confidence}</Text>
+        <Text style={styles.date}>{formatDate(bias.tradingDate || bias.publishedAt)}</Text>
+        <View style={styles.signalRow}>
+          <View style={styles.biasSignal}>
+            <Text style={styles.signalLabel}>BIAS</Text>
+            <Text style={[styles.direction, { color: directionColors[bias.forecastedBias] }]}>{bias.forecastedBias.toUpperCase()}</Text>
+          </View>
+          <View style={styles.confidenceBadge}>
+            <Text style={styles.signalLabel}>ÎNCREDERE</Text>
+            <Text style={styles.confidenceValue}>{confidenceLabels[bias.confidence]}</Text>
+          </View>
         </View>
         {bias.outcome !== "Pending" ? <View style={styles.outcome}><Text style={styles.outcomeText}>Rezultat: {bias.outcome}</Text></View> : <Text style={styles.pending}>Rezultatul va fi adăugat după încheierea sesiunii.</Text>}
         <Text style={styles.sectionTitle}>Contextul notat</Text>
         <Text style={styles.body}>{bias.notes}</Text>
+        {bias.liquidityTarget ? <Text style={styles.body}>Țintă de lichiditate: {bias.liquidityTarget}</Text> : null}
+        {bias.tradingviewUrl ? <PrimaryButton label="Vezi graficul pe TradingView" variant="ghost" onPress={() => void Linking.openURL(bias.tradingviewUrl!)} /> : null}
         {bias.videoUrl ? <PrimaryButton label="Deschide video" onPress={() => void Linking.openURL(bias.videoUrl!)} /> : null}
         {relatedReview ? (
           <View style={styles.relatedCard}>
@@ -84,13 +119,17 @@ const styles = StyleSheet.create({
   eyebrow: { color: colors.gold, fontSize: typography.small, fontWeight: "800", letterSpacing: 1.2 },
   title: { color: colors.textStrong, fontSize: 30, fontWeight: "800" },
   date: { color: colors.textMuted, fontSize: typography.body },
-  metaRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  meta: { color: colors.textSoft, fontSize: typography.small },
+  signalRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-end", gap: spacing.lg, marginVertical: spacing.xs },
+  biasSignal: { gap: spacing.xs },
+  signalLabel: { color: colors.textMuted, fontSize: typography.caption, fontWeight: "800" },
+  direction: { fontSize: 28, fontWeight: "900" },
+  confidenceBadge: { backgroundColor: colors.bgMuted, borderColor: colors.border, borderRadius: radii.sm, borderWidth: 1, gap: spacing.xs, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
+  confidenceValue: { color: colors.textStrong, fontSize: typography.body, fontWeight: "800" },
   outcome: { alignSelf: "flex-start", backgroundColor: colors.bgMuted, borderRadius: radii.pill, paddingHorizontal: 12, paddingVertical: 7 },
   outcomeText: { color: colors.goldBright, fontSize: typography.small, fontWeight: "800" },
   pending: { color: colors.textMuted, fontSize: typography.small, fontWeight: "700" },
   sectionTitle: { color: colors.textStrong, fontSize: typography.section, fontWeight: "800", marginTop: spacing.sm },
-  body: { color: colors.textSoft, fontSize: typography.body, lineHeight: 24 },
+  body: { color: colors.text, fontSize: typography.body, lineHeight: 24 },
   disclaimer: { color: colors.textMuted, fontSize: typography.small, lineHeight: 19 },
   relatedCard: {
     backgroundColor: colors.bgMuted,

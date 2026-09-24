@@ -16,6 +16,9 @@ type AfterActionReviewRow = {
   published_at: string | null;
   created_at: string | null;
   is_free: true;
+  tradingview_url: string | null;
+  thumbnail_url: string | null;
+  external_source_id: string | null;
 };
 
 function mapAfterActionReview(row: AfterActionReviewRow): AfterActionReview {
@@ -31,13 +34,16 @@ function mapAfterActionReview(row: AfterActionReviewRow): AfterActionReview {
     videoUrl: row.video_url ?? undefined,
     publishedAt: normalizeIsoDate(row.published_at, fallbackDate),
     isFree: true,
+    tradingviewUrl: row.tradingview_url ?? undefined,
+    thumbnailUrl: row.thumbnail_url ?? undefined,
+    externalSourceId: row.external_source_id ?? undefined,
   };
 }
 
 export async function fetchAfterActionReviews() {
   const result = await supabase
     .from("after_action_reviews")
-    .select("id, market, title, short_text, body_text, summary, chart_image, chart_url, video_url, published_at, created_at, is_free")
+    .select("id, market, title, short_text, body_text, summary, chart_image, chart_url, video_url, published_at, created_at, is_free, tradingview_url, thumbnail_url, external_source_id")
     .order("created_at", { ascending: false });
 
   return {
@@ -53,6 +59,8 @@ export async function publishAfterActionReview(input: {
   chart_image: string;
   body_text?: string;
   video_url?: string;
+  tradingview_url?: string;
+  thumbnail_url?: string;
   published_at?: string;
 }) {
   const publishedAt = normalizeIsoDate(input.published_at);
@@ -64,8 +72,10 @@ export async function publishAfterActionReview(input: {
       chart_url: input.chart_image,
       published_at: publishedAt,
       is_free: true,
+      tradingview_url: input.tradingview_url || null,
+      thumbnail_url: input.thumbnail_url || null,
     })
-    .select("id, market, title, short_text, body_text, summary, chart_image, chart_url, video_url, published_at, created_at, is_free")
+    .select("id, market, title, short_text, body_text, summary, chart_image, chart_url, video_url, published_at, created_at, is_free, tradingview_url, thumbnail_url, external_source_id")
     .single();
 
   return {
@@ -83,6 +93,8 @@ export async function updateAfterActionReview(
     chart_image: string;
     body_text?: string;
     video_url?: string;
+    tradingview_url?: string;
+    thumbnail_url?: string;
     published_at?: string;
   },
 ) {
@@ -93,10 +105,12 @@ export async function updateAfterActionReview(
       ...input,
       summary: input.short_text,
       chart_url: input.chart_image,
+      ...(input.tradingview_url !== undefined ? { tradingview_url: input.tradingview_url || null } : {}),
+      ...(input.thumbnail_url !== undefined ? { thumbnail_url: input.thumbnail_url || null } : {}),
       published_at: publishedAt,
     })
     .eq("id", reviewId)
-    .select("id, market, title, short_text, body_text, summary, chart_image, chart_url, video_url, published_at, created_at, is_free")
+    .select("id, market, title, short_text, body_text, summary, chart_image, chart_url, video_url, published_at, created_at, is_free, tradingview_url, thumbnail_url, external_source_id")
     .single();
 
   return {

@@ -7,6 +7,7 @@ import { PrimaryButton } from "@/components/PrimaryButton";
 import { Screen } from "@/components/Screen";
 import { SectionHeader } from "@/components/SectionHeader";
 import { pickAndUploadPaymentProof } from "@/features/storage/paymentProofs";
+import { claimJournalEntitlement } from "@/features/auth/journal-link";
 import { displayPlan } from "@/lib/display";
 import { formatDate } from "@/lib/format";
 import { useAppState } from "@/providers/AppProvider";
@@ -15,7 +16,7 @@ import { colors, radii, spacing, typography } from "@/theme";
 const benefits = ["Briefinguri video zilnice", "Acces complet pentru BTC, ETH, NQ și ES", "Notificări pentru conținut nou", "Toate AAR-urile gratuite rămân incluse"];
 
 export default function MembershipScreen() {
-  const { createPaymentRequest, membership, paymentRequests, session, user } = useAppState();
+  const { createPaymentRequest, membership, paymentRequests, refreshMembership, session, user } = useAppState();
   const [showConfirmation, setShowConfirmation] = useState(false);
   const defaultName = useMemo(() => user?.name ?? session?.user?.email?.split("@")[0] ?? "", [session?.user?.email, user?.name]);
   const defaultEmail = useMemo(() => user?.email ?? session?.user?.email ?? "", [session?.user?.email, user?.email]);
@@ -28,6 +29,8 @@ export default function MembershipScreen() {
   const [notes, setNotes] = useState("");
   const [feedback, setFeedback] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [linkCode, setLinkCode] = useState("");
+  const [linking, setLinking] = useState(false);
 
   useEffect(() => {
     if (!fullName && defaultName) setFullName(defaultName);
@@ -56,7 +59,22 @@ export default function MembershipScreen() {
     <Screen webMaxWidth={980}>
       <View style={styles.header}>
         <View style={styles.headerCopy}><Text style={styles.eyebrow}>MEMBERSHIP</Text><Text style={styles.title}>Premium Market Mechanism</Text><Text style={styles.body}>Alege durata, vezi beneficiile și trimite confirmarea într-un singur flux.</Text></View>
-        <View style={styles.currentPlan}><Text style={styles.currentLabel}>PLAN CURENT</Text><Text style={styles.currentValue}>{displayPlan(membership.currentPlan)}</Text>{membership.expiresAt ? <Text style={styles.currentMeta}>până la {formatDate(membership.expiresAt)}</Text> : null}</View>
+        <View style={styles.currentPlan}><Text style={styles.currentLabel}>PLAN CURENT</Text><Text style={styles.currentValue}>{displayPlan(membership.currentPlan)}</Text>{membership.premiumSource ? <Text style={styles.currentMeta}>{membership.premiumSource}</Text> : null}{membership.expiresAt ? <Text style={styles.currentMeta}>până la {formatDate(membership.expiresAt)}</Text> : null}</View>
+      </View>
+
+      <View style={styles.benefitCard}>
+        <Text style={styles.sectionTitle}>Conectează MM Edge Journal</Text>
+        <Text style={styles.body}>Introdu codul de conectare generat în Journal, din Settings.</Text>
+        <TextInput value={linkCode} onChangeText={setLinkCode} style={styles.input} placeholder="Cod de conectare" placeholderTextColor={colors.textSoft} autoCapitalize="characters" autoCorrect={false} />
+        <PrimaryButton label={linking ? "Se conectează..." : "Activează accesul inclus"} onPress={() => {
+          if (!session?.access_token || !linkCode.trim() || linking) return;
+          setLinking(true);
+          void claimJournalEntitlement(session.access_token, linkCode).then(async () => {
+            await refreshMembership();
+            setLinkCode("");
+            setFeedback("Conturile sunt conectate. Accesul Premium inclus este actualizat.");
+          }).catch((error) => setFeedback(String(error.message || error))).finally(() => setLinking(false));
+        }} />
       </View>
 
       <View style={styles.planGrid}>

@@ -1,0 +1,8 @@
+ios/
+.expo/
+dist/
+node_modules/
+backups/
+.git/
+.env
+supabase/.temp/

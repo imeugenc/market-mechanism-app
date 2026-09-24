@@ -21,7 +21,7 @@ export default function ReviewDetailScreen() {
   const clientReady = useClientReady();
   const review = reviews.find((item) => item.id === id);
   const relatedBias = dailyBiases.find((item) => item.relatedReviewId === id);
-  const chartImage = sanitizeRemoteImageUrl(review?.chartImage);
+  const chartImage = sanitizeRemoteImageUrl(review?.thumbnailUrl || review?.chartImage);
   const [comments, setComments] = useState<ContentComment[]>([]);
   const [commentBody, setCommentBody] = useState("");
   const [commentError, setCommentError] = useState("");
@@ -99,6 +99,7 @@ export default function ReviewDetailScreen() {
         </View>
         <Text style={styles.title}>{review.title}</Text>
         <Text style={styles.body}>{review.bodyText ?? review.shortText}</Text>
+        {review.tradingviewUrl ? <PrimaryButton label="Deschide TradingView" variant="ghost" onPress={() => void Linking.openURL(review.tradingviewUrl!)} /> : null}
         {review.videoUrl ? <PrimaryButton label="Deschide video" onPress={() => void Linking.openURL(review.videoUrl!)} /> : null}
         {relatedBias ? (
           <View style={styles.relatedCard}>

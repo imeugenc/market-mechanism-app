@@ -13,10 +13,14 @@ type ProfileAboutInput = {
   memberProfileVisibility: "members" | "private";
 };
 
+type PremiumGrantView = { source: string; status: string; starts_at: string; expires_at: string | null };
+
 export async function fetchProfileAndMembership(userId: string) {
-  const [{ data: profile }, { data: membership }] = await Promise.all([
+  const [{ data: profile }, { data: membership }, premiumResult, grantsResult] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
     supabase.from("memberships").select("*").eq("user_id", userId).maybeSingle(),
+    supabase.rpc("has_market_premium", { check_user_id: userId }),
+    supabase.rpc("my_premium_grants"),
   ]);
 
   if (!profile) {
@@ -40,14 +44,29 @@ export async function fetchProfileAndMembership(userId: string) {
     memberProfileVisibility: profile.member_profile_visibility ?? "private",
   };
 
-  const fallbackPlan = profile.subscription_tier === "premium" ? "PRO" : "FREE";
+  const now = Date.now();
+  const activeGrants = ((grantsResult.data ?? []) as PremiumGrantView[]).filter((grant) =>
+    grant.status === "active" && Date.parse(grant.starts_at) <= now && (!grant.expires_at || Date.parse(grant.expires_at) > now),
+  );
+  const legacyValid = membership?.current_plan === "PRO" && (!membership.expires_at || Date.parse(membership.expires_at) > now);
+  const effectivePremium = premiumResult.error ? legacyValid : Boolean(premiumResult.data);
+  const fallbackPlan: UserPlan = effectivePremium ? "PRO" : "FREE";
+  const hasJournalGrant = activeGrants.some((grant) => grant.source.startsWith("journal_"));
+  const hasMarketGrant = activeGrants.some((grant) => grant.source.startsWith("market_"));
+  const premiumSource = hasJournalGrant && hasMarketGrant ? "MM Edge Journal + Market Mechanism"
+    : hasJournalGrant ? "Included with MM Edge Journal"
+      : hasMarketGrant ? "Market Mechanism Premium" : undefined;
+  const expiryDates = activeGrants.map((grant) => grant.expires_at).filter((value): value is string => Boolean(value)).sort();
+  const effectiveExpiry = activeGrants.some((grant) => !grant.expires_at) ? undefined : expiryDates.at(-1);
   const stats: MembershipStats = {
     userId: membership?.user_id ?? profile.id,
-    currentPlan: membership?.current_plan ?? fallbackPlan,
+    currentPlan: fallbackPlan,
     currentRank: membership?.current_rank ?? "Recruit",
-    planLabel: membership?.plan_label ?? (fallbackPlan === "PRO" ? "Premium All Access" : "Acces Gratuit"),
+    planLabel: premiumSource ?? (fallbackPlan === "PRO" ? "Premium All Access" : "Acces Gratuit"),
     startedAt: membership?.started_at ?? profile.created_at ?? undefined,
-    expiresAt: membership?.expires_at ?? undefined,
+    expiresAt: effectiveExpiry ?? (activeGrants.length ? undefined : effectivePremium ? membership?.expires_at ?? undefined : undefined),
+    premiumSource,
+    nextGrantExpiry: expiryDates[0],
     renewalMode: membership?.renewal_mode ?? "manual",
     loginStreak: membership?.login_streak ?? 0,
     totalViews: membership?.total_views ?? 0,

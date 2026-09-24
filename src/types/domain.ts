@@ -40,6 +40,11 @@ export interface DailyBias {
   videoUrl?: string;
   relatedReviewId?: string;
   publishedAt: string;
+  tradingDate?: string;
+  liquidityTarget?: string;
+  tradingviewUrl?: string;
+  thumbnailUrl?: string;
+  externalSourceId?: string;
 }
 
 export interface AfterActionReview {
@@ -52,6 +57,9 @@ export interface AfterActionReview {
   videoUrl?: string;
   publishedAt: string;
   isFree: true;
+  tradingviewUrl?: string;
+  thumbnailUrl?: string;
+  externalSourceId?: string;
 }
 
 export interface AltcoinPost {
@@ -64,6 +72,9 @@ export interface AltcoinPost {
   videoUrl?: string;
   isPremium: boolean;
   publishedAt: string;
+  tradingviewUrl?: string;
+  thumbnailUrl?: string;
+  externalSourceId?: string;
 }
 
 export interface AnalysisRequest {
@@ -98,6 +109,8 @@ export interface MembershipStats {
   planLabel?: string;
   startedAt?: string;
   expiresAt?: string;
+  premiumSource?: string;
+  nextGrantExpiry?: string;
   renewalMode?: "manual" | "none";
   loginStreak: number;
   totalViews: number;

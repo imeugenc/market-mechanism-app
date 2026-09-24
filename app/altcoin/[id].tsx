@@ -21,7 +21,7 @@ export default function AltcoinDetailScreen() {
   if (!item) return <Screen><ContentStatePanel kind="removed" /><PrimaryButton label="Înapoi la Favorite" onPress={() => router.replace("/favorites" as Href)} /></Screen>;
 
   const locked = item.isPremium && membership.currentPlan === "FREE";
-  const image = sanitizeRemoteImageUrl(item.chartImage);
+  const image = sanitizeRemoteImageUrl(item.thumbnailUrl || item.chartImage);
   return (
     <Screen webMaxWidth={860}>
       <Stack.Screen options={{ title: item.coinSymbol }} />
@@ -31,6 +31,7 @@ export default function AltcoinDetailScreen() {
         <Text style={styles.title}>{item.title}</Text><Text style={styles.date}>{formatDailyLabel(item.publishedAt)}</Text>
         <Text style={styles.summary}>{item.summary}</Text>
         {locked ? <ContentStatePanel kind="locked" message="Poți vedea rezumatul; analiza completă este disponibilă cu Premium." /> : <Text style={styles.body}>{item.bodyText}</Text>}
+        {!locked && item.tradingviewUrl ? <PrimaryButton label="Deschide TradingView" variant="ghost" onPress={() => void Linking.openURL(item.tradingviewUrl!)} /> : null}
         {!locked && item.videoUrl ? <PrimaryButton label="Deschide video" onPress={() => void Linking.openURL(item.videoUrl!)} /> : null}
         <PrimaryButton label={favorites.some((favorite) => favorite.contentType === "altcoin" && favorite.contentId === item.id) ? "Scoate din Favorite" : "Adaugă la Favorite"} variant="ghost" onPress={() => void toggleFavorite({ contentType: "altcoin", contentId: item.id, title: item.title, subtitle: item.summary, marketLabel: item.coinSymbol })} />
       </View>
