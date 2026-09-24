@@ -9,6 +9,7 @@ import { Screen } from "@/components/Screen";
 import { createContentComment, deleteContentComment, fetchContentComments } from "@/features/comments/service";
 import { useAppState } from "@/providers/AppProvider";
 import { formatDate } from "@/lib/format";
+import { displayBiasConfidence } from "@/lib/display";
 import { useClientReady } from "@/hooks/useResponsiveWeb";
 import { contentPreviewImage } from "@/lib/media";
 import { colors, radii, spacing, typography } from "@/theme";
@@ -105,7 +106,7 @@ export default function ReviewDetailScreen() {
         {relatedBias ? (
           <View style={styles.relatedCard}>
             <Text style={styles.relatedEyebrow}>DAILY BIAS ASOCIAT</Text>
-            <Text style={styles.relatedTitle}>{relatedBias.market} · {relatedBias.forecastedBias} · Încredere {({ Low: "scăzută", Medium: "medie", High: "ridicată" } as const)[relatedBias.confidence]}</Text>
+            <Text style={styles.relatedTitle}>{relatedBias.market} · {relatedBias.forecastedBias} · Încredere {displayBiasConfidence(relatedBias.confidence)}</Text>
             <PrimaryButton label="Vezi Daily Bias" variant="ghost" onPress={() => router.push(`/bias/${relatedBias.id}` as Href)} />
           </View>
         ) : null}

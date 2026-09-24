@@ -12,6 +12,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { SegmentedControl } from "@/components/SegmentedControl";
 import { normalizeIsoDate } from "@/lib/dates";
 import { formatDate } from "@/lib/format";
+import { displayBiasConfidence, displayBiasOutcome } from "@/lib/display";
 import { sanitizeRemoteImageUrl } from "@/lib/media";
 import { useAppState } from "@/providers/AppProvider";
 import { colors, radii, spacing, typography } from "@/theme";
@@ -1061,12 +1062,12 @@ export default function AdminScreen() {
           {dailyBiases.map((bias) => (
             <View key={bias.id} style={styles.item}>
               <Pressable style={styles.collapseHeader} onPress={() => toggleContentItem(`bias-${bias.id}`)}>
-                <Text style={styles.collapseTitle}>{bias.market} · {bias.forecastedBias} · {formatDate(bias.publishedAt)} · {bias.outcome}</Text>
+                <Text style={styles.collapseTitle}>{bias.market} · {bias.forecastedBias} · {formatDate(bias.publishedAt)} · {displayBiasOutcome(bias.outcome)}</Text>
                 <Text style={styles.collapseMeta}>{expandedContent[`bias-${bias.id}`] ? "Ascunde" : "Arată"}</Text>
               </Pressable>
               {expandedContent[`bias-${bias.id}`] ? (
                 <>
-                  <Text style={styles.itemMeta}>{formatDate(bias.publishedAt)} • {bias.confidence} • {bias.outcome}</Text>
+                  <Text style={styles.itemMeta}>{formatDate(bias.publishedAt)} • Încredere {displayBiasConfidence(bias.confidence)} • {displayBiasOutcome(bias.outcome)}</Text>
                   {bias.externalSourceId ? <Text style={styles.helperText}>Source: MM Edge Journal</Text> : null}
                   <Text style={styles.requestNotes}>{bias.notes}</Text>
                   {bias.relatedReviewId ? <Text style={styles.helperText}>AAR conectat: {reviews.find((item) => item.id === bias.relatedReviewId)?.title ?? "Review indisponibil"}</Text> : null}

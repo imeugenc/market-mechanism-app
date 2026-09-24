@@ -9,6 +9,7 @@ import { fetchDailyBiasById } from "@/features/content/biases";
 import { isPublishedToday } from "@/lib/contentAvailability";
 import { useClientReady } from "@/hooks/useResponsiveWeb";
 import { formatDate } from "@/lib/format";
+import { displayBiasConfidence, displayBiasOutcome } from "@/lib/display";
 import { contentPreviewImage } from "@/lib/media";
 import { useAppState } from "@/providers/AppProvider";
 import { colors, radii, spacing, typography } from "@/theme";
@@ -22,8 +23,6 @@ const directionColors = {
   Neutral: colors.textStrong,
   Range: colors.goldBright,
 };
-
-const confidenceLabels = { Low: "Încredere scăzută", Medium: "Încredere medie", High: "Încredere ridicată" };
 
 export default function BiasDetailScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -80,10 +79,10 @@ export default function BiasDetailScreen() {
           </View>
           <View style={styles.confidenceBadge}>
             <Text style={styles.signalLabel}>ÎNCREDERE</Text>
-            <Text style={styles.confidenceValue}>{confidenceLabels[bias.confidence]}</Text>
+            <Text style={styles.confidenceValue}>Încredere {displayBiasConfidence(bias.confidence)}</Text>
           </View>
         </View>
-        {bias.outcome !== "Pending" ? <View style={styles.outcome}><Text style={styles.outcomeText}>Rezultat: {bias.outcome}</Text></View> : <Text style={styles.pending}>Rezultatul va fi adăugat după încheierea sesiunii.</Text>}
+        {bias.outcome !== "Pending" ? <View style={styles.outcome}><Text style={styles.outcomeText}>Rezultat: {displayBiasOutcome(bias.outcome)}</Text></View> : <Text style={styles.pending}>Rezultatul va fi adăugat după încheierea sesiunii.</Text>}
         <Text style={styles.sectionTitle}>Contextul notat</Text>
         <Text style={styles.body}>{bias.notes}</Text>
         {bias.liquidityTarget ? <Text style={styles.body}>Țintă de lichiditate: {bias.liquidityTarget}</Text> : null}

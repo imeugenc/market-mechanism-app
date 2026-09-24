@@ -12,7 +12,7 @@ import { SegmentedControl } from "@/components/SegmentedControl";
 import { CORE_MARKETS } from "@/constants/markets";
 import { canAccessPremiumContent } from "@/features/content/access";
 import { isPublishedToday, sortNewest } from "@/lib/contentAvailability";
-import { displayPlan } from "@/lib/display";
+import { displayBiasConfidence, displayBiasOutcome, displayPlan } from "@/lib/display";
 import { formatDailyLabel } from "@/lib/format";
 import { useClientReady } from "@/hooks/useResponsiveWeb";
 import { useAppState } from "@/providers/AppProvider";
@@ -103,7 +103,7 @@ export function MarketDetailScreen() {
       {showSections && view === "history" ? (
         <>
           <SectionHeader eyebrow="Istoric" title="Daily Bias" />
-          {publicContentStates.biases === "loading" ? <ContentStatePanel kind="loading" compact /> : publicContentStates.biases === "error" ? <ContentStatePanel kind="error" compact /> : marketBiases.length ? <View style={styles.list}>{marketBiases.map((bias) => <Pressable key={bias.id} style={styles.historyRow} onPress={() => router.push(`/bias/${bias.id}` as Href)}><View style={styles.row}><Text style={styles.historyTitle}>{bias.forecastedBias} · {bias.confidence}</Text><Text style={styles.date}>{formatDailyLabel(bias.publishedAt)}</Text></View><Text style={styles.body} numberOfLines={2}>{bias.notes}</Text><Text style={styles.outcome}>{bias.outcome === "Pending" ? "Rezultat în așteptare" : bias.outcome}</Text></Pressable>)}</View> : <ContentStatePanel kind="empty" title="Nu există Bias-uri istorice" compact />}
+          {publicContentStates.biases === "loading" ? <ContentStatePanel kind="loading" compact /> : publicContentStates.biases === "error" ? <ContentStatePanel kind="error" compact /> : marketBiases.length ? <View style={styles.list}>{marketBiases.map((bias) => <Pressable key={bias.id} style={styles.historyRow} onPress={() => router.push(`/bias/${bias.id}` as Href)}><View style={styles.row}><Text style={styles.historyTitle}>{bias.forecastedBias} · Încredere {displayBiasConfidence(bias.confidence)}</Text><Text style={styles.date}>{formatDailyLabel(bias.publishedAt)}</Text></View><Text style={styles.body} numberOfLines={2}>{bias.notes}</Text><Text style={styles.outcome}>{bias.outcome === "Pending" ? "Rezultat în așteptare" : displayBiasOutcome(bias.outcome)}</Text></Pressable>)}</View> : <ContentStatePanel kind="empty" title="Nu există Bias-uri istorice" compact />}
           <SectionHeader eyebrow="Istoric" title="After Action Review" />
           {publicContentStates.reviews === "loading" ? <ContentStatePanel kind="loading" compact /> : publicContentStates.reviews === "error" ? <ContentStatePanel kind="error" compact /> : marketReviews.length ? <View style={styles.list}>{marketReviews.map((review) => <ReviewCard key={review.id} item={review} favorited={favorites.some((item) => item.contentType === "review" && item.contentId === review.id)} onToggleFavorite={() => toggleItemFavorite({ contentType: "review", contentId: review.id, title: review.title, subtitle: review.shortText })} />)}</View> : <ContentStatePanel kind="empty" title="Nu există AAR-uri istorice" compact />}
           <SectionHeader eyebrow="Istoric Premium" title="Briefinguri video" />

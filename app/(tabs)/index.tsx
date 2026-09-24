@@ -13,7 +13,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { CORE_MARKETS } from "@/constants/markets";
 import { isPremiumLocked, latestAnalysisByMarket } from "@/features/content/access";
 import { isPublishedToday, sortNewest } from "@/lib/contentAvailability";
-import { displayPlan, displayRank } from "@/lib/display";
+import { displayBiasConfidence, displayBiasOutcome, displayPlan, displayRank } from "@/lib/display";
 import { formatDailyLabel } from "@/lib/format";
 import { useAppState } from "@/providers/AppProvider";
 import { colors, radii, spacing, typography } from "@/theme";
@@ -28,7 +28,6 @@ export default function HomeScreen() {
   const latestBriefing = latestAnalysisByMarket(analyses)[0];
   const marketStates = [publicContentStates.biases, publicContentStates.reviews, publicContentStates.analyses];
   const marketContentStatus = marketStates.some((state) => state === "loading") ? "loading" : marketStates.every((state) => state === "error") ? "error" : "ready";
-  const confidenceText = { Low: "scăzută", Medium: "medie", High: "ridicată" } as const;
 
   useEffect(() => {
     if (onboardingReady && !hasCompletedOnboarding) router.replace("/onboarding");
@@ -57,7 +56,7 @@ export default function HomeScreen() {
           <View style={styles.focusGrid}>
             <Pressable style={[styles.focusCard, styles.focusCardPrimary]} onPress={() => latestBiases[0] && router.push(`/bias/${latestBiases[0].id}` as Href)}>
               <View style={styles.focusTop}><MaterialCommunityIcons name="crosshairs-gps" color={colors.gold} size={20} /><Text style={styles.focusMeta}>{latestBiases[0]?.market ?? "DAILY BIAS"}</Text></View>
-              <Text style={styles.focusTitle}>{latestBiases[0] ? `${latestBiases[0].forecastedBias} · Încredere ${confidenceText[latestBiases[0].confidence]}` : publicContentStates.biases === "loading" ? "Se încarcă Daily Bias…" : publicContentStates.biases === "error" ? "Daily Bias indisponibil" : "Niciun Daily Bias publicat"}</Text>
+              <Text style={styles.focusTitle}>{latestBiases[0] ? `${latestBiases[0].forecastedBias} · Încredere ${displayBiasConfidence(latestBiases[0].confidence)}` : publicContentStates.biases === "loading" ? "Se încarcă Daily Bias…" : publicContentStates.biases === "error" ? "Daily Bias indisponibil" : "Niciun Daily Bias publicat"}</Text>
               <Text style={styles.focusBody}>{latestBiases[0] ? formatDailyLabel(latestBiases[0].publishedAt) : publicContentStates.biases === "ready" ? "Primul Bias publicat va apărea aici." : "Verificăm informația curentă."}</Text>
             </Pressable>
             <Pressable style={styles.focusCard} onPress={() => latestReview && router.push(`/review/${latestReview.id}` as Href)}>
@@ -89,9 +88,9 @@ export default function HomeScreen() {
           {publicContentStates.biases === "loading" ? <ContentStatePanel kind="loading" title="Se încarcă Daily Bias…" compact /> : publicContentStates.biases === "error" ? <ContentStatePanel kind="error" title="Daily Bias nu s-a încărcat" compact /> : latestBiases.length ? <View style={styles.list}>{latestBiases.map((bias) => (
             <Pressable key={bias.id} style={styles.rowCard} onPress={() => router.push(`/bias/${bias.id}` as Href)}>
               <View style={styles.rowTop}><Text style={styles.rowMarket}>{bias.market}</Text><Text style={styles.rowDate}>{formatDailyLabel(bias.publishedAt)}</Text></View>
-              <Text style={styles.rowTitle}>{bias.forecastedBias} · Încredere {confidenceText[bias.confidence]}</Text>
+              <Text style={styles.rowTitle}>{bias.forecastedBias} · Încredere {displayBiasConfidence(bias.confidence)}</Text>
               <Text style={styles.rowBody} numberOfLines={2}>{bias.notes}</Text>
-              <Text style={styles.rowOutcome}>{bias.outcome === "Pending" ? "Rezultat în așteptare" : `Rezultat: ${bias.outcome}`}</Text>
+              <Text style={styles.rowOutcome}>{bias.outcome === "Pending" ? "Rezultat în așteptare" : `Rezultat: ${displayBiasOutcome(bias.outcome)}`}</Text>
             </Pressable>
           ))}</View> : <ContentStatePanel kind="empty" title="Nu există încă Daily Bias publicat" />}
 
