@@ -294,7 +294,7 @@ export function AppProvider({ children }: PropsWithChildren) {
   const [notifications, setNotifications] = useState<InAppNotification[]>([]);
   const [onboardingReady, setOnboardingReady] = useState(false);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
-  const lastHydratedSessionKeyRef = useRef<string>("guest");
+  const lastHydratedSessionKeyRef = useRef<string | null>(null);
 
   const resetAuthState = () => {
     setSession(null);
@@ -411,6 +411,49 @@ export function AppProvider({ children }: PropsWithChildren) {
       return;
     }
 
+    let disposed = false;
+    let hydrationGeneration = 0;
+    let activeHydrationKey: string | null = null;
+    let activeHydration: Promise<unknown> | null = null;
+    const scheduledHydrations = new Set<ReturnType<typeof setTimeout>>();
+
+    const hydrateSession = (nextSession: Session | null) => {
+      const nextSessionKey = getSessionKey(nextSession);
+
+      if (activeHydrationKey === nextSessionKey && activeHydration) {
+        return activeHydration;
+      }
+
+      if (lastHydratedSessionKeyRef.current === nextSessionKey) {
+        return Promise.resolve();
+      }
+
+      const generation = ++hydrationGeneration;
+      lastHydratedSessionKeyRef.current = nextSessionKey;
+      activeHydrationKey = nextSessionKey;
+      setAuthReady(false);
+
+      const hydration = applySessionState(nextSession)
+        .catch(() => {
+          if (generation === hydrationGeneration) {
+            setProtectedDataState("error");
+          }
+        })
+        .finally(() => {
+          if (!disposed && generation === hydrationGeneration) {
+            setAuthReady(true);
+          }
+
+          if (activeHydration === hydration) {
+            activeHydration = null;
+            activeHydrationKey = null;
+          }
+        });
+
+      activeHydration = hydration;
+      return hydration;
+    };
+
     void (async () => {
       const stored = await AsyncStorage.getItem(ONBOARDING_STORAGE_KEY);
       setHasCompletedOnboarding(stored === "true");
@@ -419,56 +462,64 @@ export function AppProvider({ children }: PropsWithChildren) {
 
     void (async () => {
       setPublicContentState("loading");
-      const [analysesResult, biasesResult, reviewsResult, altcoinsResult] = await Promise.all([
-        fetchDailyAnalyses(),
-        fetchDailyBiases(),
-        fetchAfterActionReviews(),
-        fetchAltcoinPosts(),
-      ]);
+      try {
+        const [analysesResult, biasesResult, reviewsResult, altcoinsResult] = await Promise.all([
+          fetchDailyAnalyses(),
+          fetchDailyBiases(),
+          fetchAfterActionReviews(),
+          fetchAltcoinPosts(),
+        ]);
 
-      if (!analysesResult.error && analysesResult.data) {
-        setAnalysisState(analysesResult.data);
-      }
+        if (!analysesResult.error && analysesResult.data) {
+          setAnalysisState(analysesResult.data);
+        }
 
-      if (!biasesResult.error && biasesResult.data) {
-        setDailyBiasState(biasesResult.data);
-      }
+        if (!biasesResult.error && biasesResult.data) {
+          setDailyBiasState(biasesResult.data);
+        }
 
-      if (!reviewsResult.error && reviewsResult.data) {
-        setReviewState(reviewsResult.data);
-      }
+        if (!reviewsResult.error && reviewsResult.data) {
+          setReviewState(reviewsResult.data);
+        }
 
-      if (!altcoinsResult.error && altcoinsResult.data) {
-        setAltcoinPostState(altcoinsResult.data);
+        if (!altcoinsResult.error && altcoinsResult.data) {
+          setAltcoinPostState(altcoinsResult.data);
+        }
+        setPublicContentState(resolveDataLoadState([analysesResult, biasesResult, reviewsResult, altcoinsResult]));
+      } catch {
+        setPublicContentState("error");
       }
-      setPublicContentState(resolveDataLoadState([analysesResult, biasesResult, reviewsResult, altcoinsResult]));
     })();
 
     void (async () => {
-      setAuthReady(false);
-      const { data } = await getCurrentSession();
-      const nextSession = data.session ?? null;
-      const nextSessionKey = getSessionKey(nextSession);
-      lastHydratedSessionKeyRef.current = nextSessionKey;
-      await applySessionState(nextSession);
-      setAuthReady(true);
+      try {
+        const { data } = await getCurrentSession();
+        await hydrateSession(data.session ?? null);
+      } catch {
+        if (!disposed) {
+          setProtectedDataState("error");
+          setAuthReady(true);
+        }
+      }
     })();
 
-    const { data: subscription } = subscribeToAuthChanges(async (_event, nextSession) => {
-      const nextSessionKey = getSessionKey(nextSession);
-
-      if (lastHydratedSessionKeyRef.current === nextSessionKey) {
-        setAuthReady(true);
-        return;
-      }
-
-      lastHydratedSessionKeyRef.current = nextSessionKey;
-      setAuthReady(false);
-      await applySessionState(nextSession);
-      setAuthReady(true);
+    const { data: subscription } = subscribeToAuthChanges((_event, nextSession) => {
+      // Supabase invokes auth listeners while holding its auth lock. Defer all
+      // Supabase-backed hydration until the listener has returned.
+      const timeout = setTimeout(() => {
+        scheduledHydrations.delete(timeout);
+        if (!disposed) {
+          void hydrateSession(nextSession);
+        }
+      }, 0);
+      scheduledHydrations.add(timeout);
+      return Promise.resolve();
     });
 
     return () => {
+      disposed = true;
+      scheduledHydrations.forEach((timeout) => clearTimeout(timeout));
+      scheduledHydrations.clear();
       subscription.subscription.unsubscribe();
     };
   }, []);
