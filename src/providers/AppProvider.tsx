@@ -348,15 +348,16 @@ export function AppProvider({ children }: PropsWithChildren) {
       const fallbackStats = applyRank({
         ...baseStats,
         userId: sessionUser.id,
-        currentPlan: "FREE",
-        planLabel: "Acces Gratuit",
+        currentPlan: fallbackUser.isAdmin ? "PRO" : "FREE",
+        planLabel: fallbackUser.isAdmin ? "Acces Owner" : "Acces Gratuit",
         startedAt: new Date().toISOString(),
         expiresAt: undefined,
         renewalMode: "manual",
+        accessSource: fallbackUser.isAdmin ? "owner" : undefined,
       });
 
       setUser(fallbackUser);
-      setCurrentPlan("FREE");
+      setCurrentPlan(fallbackStats.currentPlan);
       setStats(fallbackStats);
       return {
         user: fallbackUser,
@@ -529,9 +530,10 @@ export function AppProvider({ children }: PropsWithChildren) {
     () =>
       applyRank({
         ...stats,
-        currentPlan,
+        currentPlan: isOwnerEmail(session?.user?.email) ? "PRO" : currentPlan,
+        accessSource: isOwnerEmail(session?.user?.email) ? "owner" : stats.accessSource,
       }),
-    [currentPlan, stats],
+    [currentPlan, session?.user?.email, stats],
   );
 
   useEffect(() => {

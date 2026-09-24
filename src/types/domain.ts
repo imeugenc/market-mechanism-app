@@ -112,6 +112,7 @@ export interface MembershipStats {
   premiumSource?: string;
   nextGrantExpiry?: string;
   renewalMode?: "manual" | "none";
+  accessSource?: string;
   loginStreak: number;
   totalViews: number;
   premiumViews: number;

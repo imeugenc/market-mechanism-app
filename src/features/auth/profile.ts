@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { isOwnerEmail } from "@/constants/access";
 import { AdminUserRecord, AppUser, MembershipStats, UserPlan } from "@/types/domain";
 
 type ProfileAboutInput = {
@@ -48,13 +49,15 @@ export async function fetchProfileAndMembership(userId: string) {
   const activeGrants = ((grantsResult.data ?? []) as PremiumGrantView[]).filter((grant) =>
     grant.status === "active" && Date.parse(grant.starts_at) <= now && (!grant.expires_at || Date.parse(grant.expires_at) > now),
   );
+  const preferred = activeGrants.find((grant) => grant.source === "market_paid") ?? activeGrants[0];
+  const owner = user.isAdmin || isOwnerEmail(user.email);
   const legacyValid = membership?.current_plan === "PRO" && (!membership.expires_at || Date.parse(membership.expires_at) > now);
-  const effectivePremium = premiumResult.error ? legacyValid : Boolean(premiumResult.data);
+  const effectivePremium = owner || (premiumResult.error ? activeGrants.length > 0 || legacyValid : Boolean(premiumResult.data));
   const fallbackPlan: UserPlan = effectivePremium ? "PRO" : "FREE";
   const hasJournalGrant = activeGrants.some((grant) => grant.source.startsWith("journal_"));
   const hasMarketGrant = activeGrants.some((grant) => grant.source.startsWith("market_"));
-  const premiumSource = hasJournalGrant && hasMarketGrant ? "MM Edge Journal + Market Mechanism"
-    : hasJournalGrant ? "Included with MM Edge Journal"
+  const premiumSource = owner ? "Owner / Creator" : hasJournalGrant && hasMarketGrant ? "MM Edge Journal + Market Mechanism"
+    : hasJournalGrant ? "Inclus prin MM Edge Journal"
       : hasMarketGrant ? "Market Mechanism Premium" : undefined;
   const expiryDates = activeGrants.map((grant) => grant.expires_at).filter((value): value is string => Boolean(value)).sort();
   const effectiveExpiry = activeGrants.some((grant) => !grant.expires_at) ? undefined : expiryDates.at(-1);
@@ -68,6 +71,7 @@ export async function fetchProfileAndMembership(userId: string) {
     premiumSource,
     nextGrantExpiry: expiryDates[0],
     renewalMode: membership?.renewal_mode ?? "manual",
+    accessSource: owner ? "owner" : preferred?.source,
     loginStreak: membership?.login_streak ?? 0,
     totalViews: membership?.total_views ?? 0,
     premiumViews: membership?.premium_views ?? 0,

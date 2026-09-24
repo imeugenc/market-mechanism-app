@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from "@/components/StableIcons";
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { PrimaryButton } from "@/components/PrimaryButton";
@@ -8,6 +8,7 @@ import { Screen } from "@/components/Screen";
 import { SectionHeader } from "@/components/SectionHeader";
 import { pickAndUploadPaymentProof } from "@/features/storage/paymentProofs";
 import { claimJournalEntitlement } from "@/features/auth/journal-link";
+import { marketBilling, MarketBillingStatus } from "@/features/payments/market-billing";
 import { displayPlan } from "@/lib/display";
 import { formatDate } from "@/lib/format";
 import { useAppState } from "@/providers/AppProvider";
@@ -27,17 +28,21 @@ export default function MembershipScreen() {
   const [paymentProof, setPaymentProof] = useState("");
   const [transactionRef, setTransactionRef] = useState("");
   const [notes, setNotes] = useState("");
-  const [feedback, setFeedback] = useState("");
   const [uploading, setUploading] = useState(false);
   const [linkCode, setLinkCode] = useState("");
   const [linking, setLinking] = useState(false);
+  const [plan, setPlan] = useState<"monthly" | "quarterly">("monthly");
+  const [feedback, setFeedback] = useState("");
+  const [billing, setBilling] = useState<MarketBillingStatus["subscription"]>(null);
+  const [busy, setBusy] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   useEffect(() => {
     if (!fullName && defaultName) setFullName(defaultName);
     if (!contactEmail && defaultEmail) setContactEmail(defaultEmail);
   }, [contactEmail, defaultEmail, defaultName, fullName]);
 
-  const submit = async () => {
+  const submitManualPayment = async () => {
     if (!session?.user) return setFeedback("Autentifică-te înainte să trimiți confirmarea.");
     if (!fullName.trim() || !contactEmail.trim()) return setFeedback("Completează numele și adresa de email.");
     if (!paymentProof.trim()) return setFeedback("Adaugă dovada plății sau o notă clară despre plată.");
@@ -47,7 +52,7 @@ export default function MembershipScreen() {
     Alert.alert("Confirmare trimisă", result.message);
   };
 
-  const upload = async () => {
+  const uploadProof = async () => {
     const id = session?.user?.id ?? user?.id;
     if (!id) return setFeedback("Autentifică-te înainte să încarci dovada plății.");
     setUploading(true); const result = await pickAndUploadPaymentProof(id); setUploading(false);
@@ -55,15 +60,40 @@ export default function MembershipScreen() {
     setPaymentProof(result.url); setFeedback("");
   };
 
+  useEffect(() => {
+    if (!session?.user) return;
+    void marketBilling("status").then((result) => setBilling(result.subscription)).catch(() => setFeedback("Starea abonamentului este temporar indisponibilă."));
+  }, [session?.user?.id]);
+
+  const checkout = async () => {
+    setBusy(true); setFeedback("");
+    try {
+      const result = await marketBilling("checkout", plan);
+      if (!result.url) throw new Error("Plata nu a putut fi deschisă.");
+      await Linking.openURL(result.url);
+    } catch (error) { setFeedback(String((error as Error).message)); }
+    finally { setBusy(false); }
+  };
+
+  const changeRenewal = async (action: "cancel" | "resume") => {
+    setBusy(true); setFeedback("");
+    try {
+      const result = await marketBilling(action);
+      setBilling((current) => current ? { ...current, cancelAtPeriodEnd: Boolean(result.cancelAtPeriodEnd) } : current);
+      setConfirmCancel(false);
+      setFeedback(action === "cancel" ? "Reînnoirea s-a oprit. Premium rămâne activ până la sfârșitul perioadei plătite." : "Reînnoirea automată a fost reluată.");
+    } catch (error) { setFeedback(String((error as Error).message)); }
+    finally { setBusy(false); }
+  };
+
   return (
     <Screen webMaxWidth={980}>
       <View style={styles.header}>
-        <View style={styles.headerCopy}><Text style={styles.eyebrow}>MEMBERSHIP</Text><Text style={styles.title}>Premium Market Mechanism</Text><Text style={styles.body}>Alege durata, vezi beneficiile și trimite confirmarea într-un singur flux.</Text></View>
+        <View style={styles.headerCopy}><Text style={styles.eyebrow}>MEMBERSHIP</Text><Text style={styles.title}>Premium Market Mechanism</Text><Text style={styles.body}>Alege planul și activează Premium în siguranță prin Stripe.</Text></View>
         <View style={styles.currentPlan}><Text style={styles.currentLabel}>PLAN CURENT</Text><Text style={styles.currentValue}>{displayPlan(membership.currentPlan)}</Text>{membership.premiumSource ? <Text style={styles.currentMeta}>{membership.premiumSource}</Text> : null}{membership.expiresAt ? <Text style={styles.currentMeta}>până la {formatDate(membership.expiresAt)}</Text> : null}</View>
       </View>
 
-      <View style={styles.benefitCard}>
-        <Text style={styles.sectionTitle}>Conectează MM Edge Journal</Text>
+      {membership.accessSource !== "owner" ? <CollapsibleSection title="Conectează MM Edge Journal" eyebrow="Acces inclus">
         <Text style={styles.body}>Introdu codul de conectare generat în Journal, din Settings.</Text>
         <TextInput value={linkCode} onChangeText={setLinkCode} style={styles.input} placeholder="Cod de conectare" placeholderTextColor={colors.textSoft} autoCapitalize="characters" autoCorrect={false} />
         <PrimaryButton label={linking ? "Se conectează..." : "Activează accesul inclus"} onPress={() => {
@@ -75,12 +105,12 @@ export default function MembershipScreen() {
             setFeedback("Conturile sunt conectate. Accesul Premium inclus este actualizat.");
           }).catch((error) => setFeedback(String(error.message || error))).finally(() => setLinking(false));
         }} />
-      </View>
+      </CollapsibleSection> : null}
 
-      <View style={styles.planGrid}>
-        <PlanCard days={30} price="10$" selected={durationDays === 30} onPress={() => setDurationDays(30)} />
-        <PlanCard days={90} price="25$" selected={durationDays === 90} badge="Economisești" onPress={() => setDurationDays(90)} />
-      </View>
+      {membership.accessSource !== "owner" ? <View style={styles.planGrid}>
+        <PlanCard label="1 lună" price="10$" selected={plan === "monthly"} onPress={() => setPlan("monthly")} />
+        <PlanCard label="3 luni" price="25$" selected={plan === "quarterly"} badge="Economisești" onPress={() => setPlan("quarterly")} />
+      </View> : null}
 
       <View style={styles.benefitCard}>
         <Text style={styles.sectionTitle}>Ce deblochezi</Text>
@@ -88,7 +118,14 @@ export default function MembershipScreen() {
       </View>
 
       {feedback ? <View style={styles.feedback}><Text style={styles.feedbackText}>{feedback}</Text></View> : null}
-      <PrimaryButton label={membership.currentPlan === "PRO" ? "Prelungește Premium" : `Continuă cu ${durationDays} zile`} onPress={() => { setFeedback(""); setShowConfirmation(true); }} />
+      {billing ? <View style={styles.feedback}><Text style={styles.feedbackText}>{billing.cancelAtPeriodEnd ? "Reînnoirea este anulată" : "Abonament Stripe activ"}{billing.paidThroughAt ? ` · acces până la ${formatDate(billing.paidThroughAt)}` : ""}</Text></View> : null}
+      {membership.accessSource === "owner"
+        ? <Text style={styles.body}>Acces Owner activ, fără expirare.</Text>
+        : billing && !billing.cancelAtPeriodEnd && billing.paidThroughAt && Date.parse(billing.paidThroughAt) > Date.now()
+        ? <><PrimaryButton label={confirmCancel ? "Confirmă anularea" : "Anulează reînnoirea"} variant="ghost" onPress={() => confirmCancel ? void changeRenewal("cancel") : setConfirmCancel(true)} /><Text style={styles.body}>{confirmCancel ? "Premium rămâne activ până la sfârșitul perioadei plătite, apoi nu se mai reînnoiește." : ""}</Text></>
+        : billing?.cancelAtPeriodEnd && billing.paidThroughAt && Date.parse(billing.paidThroughAt) > Date.now()
+          ? <PrimaryButton label="Reia reînnoirea" onPress={() => void changeRenewal("resume")} />
+          : <PrimaryButton label={busy ? "Se deschide plata…" : `Abonează-te: ${plan === "monthly" ? "1 lună" : "3 luni"}`} onPress={() => void checkout()} />}
 
       <CollapsibleSection title="Gratuit vs Premium" eyebrow="Comparație">
         <ComparisonLine label="After Action Review" free="Inclus" premium="Inclus" />
@@ -97,7 +134,16 @@ export default function MembershipScreen() {
         <ComparisonLine label="Notificări" free="Limitate" premium="Incluse" />
       </CollapsibleSection>
 
-      <CollapsibleSection title="Confirmări trimise" eyebrow="Istoric" rightLabel={String(paymentRequests.length)}>
+      {membership.accessSource !== "owner" ? <CollapsibleSection title="Alte metode de plată" eyebrow="Opțional">
+        <Text style={styles.body}>PayPal, USDT sau RedotPay se verifică manual după trimiterea confirmării.</Text>
+        <PrimaryButton label="Continuă cu plată manuală" variant="ghost" onPress={() => {
+          setDurationDays(plan === "monthly" ? 30 : 90);
+          setFeedback("");
+          setShowConfirmation(true);
+        }} />
+      </CollapsibleSection> : null}
+
+      <CollapsibleSection title="Plăți manuale anterioare" eyebrow="Istoric" rightLabel={String(paymentRequests.length)}>
         {paymentRequests.length ? paymentRequests.map((item) => <View key={item.id} style={styles.history}><View style={styles.historyTop}><Text style={styles.historyTitle}>{item.planLabel ?? "Premium"}</Text><Text style={styles.historyStatus}>{item.status === "verified" ? "Validată" : item.status === "rejected" ? "Respinsă" : "În verificare"}</Text></View><Text style={styles.currentMeta}>{formatDate(item.createdAt)} · {item.paymentMethod.toUpperCase()}</Text>{item.notes ? <Text style={styles.body}>{item.notes}</Text> : null}</View>) : <Text style={styles.body}>Nu ai trimis încă nicio confirmare.</Text>}
       </CollapsibleSection>
 
@@ -108,18 +154,19 @@ export default function MembershipScreen() {
           <Text style={styles.label}>Nume complet</Text><TextInput value={fullName} onChangeText={setFullName} style={styles.input} placeholder="Nume și prenume" placeholderTextColor={colors.textSoft} />
           <Text style={styles.label}>Email</Text><TextInput value={contactEmail} onChangeText={setContactEmail} style={styles.input} placeholder="email@exemplu.com" placeholderTextColor={colors.textSoft} autoCapitalize="none" keyboardType="email-address" />
           <Text style={styles.label}>Metodă</Text><View style={styles.methodRow}>{(["paypal", "usdt", "redotpay"] as const).map((method) => <PrimaryButton key={method} label={method === "paypal" ? "PayPal" : method === "usdt" ? "USDT" : "RedotPay"} variant={paymentMethod === method ? "gold" : "ghost"} onPress={() => setPaymentMethod(method)} />)}</View>
-          <Text style={styles.label}>Dovadă plată</Text><TextInput value={paymentProof} onChangeText={setPaymentProof} style={[styles.input, styles.notes]} placeholder="Link, hash sau detalii" placeholderTextColor={colors.textSoft} multiline /><PrimaryButton label={uploading ? "Se încarcă…" : "Încarcă o captură"} variant="ghost" onPress={() => void upload()} />
+          <Text style={styles.label}>Dovadă plată</Text><TextInput value={paymentProof} onChangeText={setPaymentProof} style={[styles.input, styles.notes]} placeholder="Link, hash sau detalii" placeholderTextColor={colors.textSoft} multiline /><PrimaryButton label={uploading ? "Se încarcă…" : "Încarcă o captură"} variant="ghost" onPress={() => void uploadProof()} />
           <Text style={styles.label}>Referință tranzacție</Text><TextInput value={transactionRef} onChangeText={setTransactionRef} style={styles.input} placeholder="ID / hash / referință" placeholderTextColor={colors.textSoft} autoCapitalize="none" />
           <Text style={styles.label}>Mesaj opțional</Text><TextInput value={notes} onChangeText={setNotes} style={[styles.input, styles.notes]} placeholder="Detalii pentru verificare" placeholderTextColor={colors.textSoft} multiline />
-          {feedback ? <Text style={styles.error}>{feedback}</Text> : null}<PrimaryButton label="Trimite confirmarea" onPress={() => void submit()} /><PrimaryButton label="Închide" variant="ghost" onPress={() => setShowConfirmation(false)} />
+          {feedback ? <Text style={styles.error}>{feedback}</Text> : null}<PrimaryButton label="Trimite confirmarea" onPress={() => void submitManualPayment()} /><PrimaryButton label="Închide" variant="ghost" onPress={() => setShowConfirmation(false)} />
         </ScrollView></View></View>
       </Modal>
+
     </Screen>
   );
 }
 
-function PlanCard({ days, price, selected, badge, onPress }: { days: number; price: string; selected: boolean; badge?: string; onPress: () => void }) {
-  return <Pressable onPress={onPress} style={[styles.planCard, selected && styles.planCardSelected]}>{badge ? <Text style={styles.badge}>{badge}</Text> : null}<Text style={styles.planDays}>{days} zile</Text><Text style={styles.planPrice}>{price}</Text><Text style={styles.planCaption}>Acces Premium complet</Text><View style={[styles.radio, selected && styles.radioSelected]} /></Pressable>;
+function PlanCard({ label, price, selected, badge, onPress }: { label: string; price: string; selected: boolean; badge?: string; onPress: () => void }) {
+  return <Pressable onPress={onPress} style={[styles.planCard, selected && styles.planCardSelected]}>{badge ? <Text style={styles.badge}>{badge}</Text> : null}<Text style={styles.planDays}>{label}</Text><Text style={styles.planPrice}>{price}</Text><Text style={styles.planCaption}>Acces Premium complet</Text><View style={[styles.radio, selected && styles.radioSelected]} /></Pressable>;
 }
 function ComparisonLine({ label, free, premium }: { label: string; free: string; premium: string }) { return <View style={styles.compare}><Text style={styles.compareLabel}>{label}</Text><Text style={styles.compareValue}>{free}</Text><Text style={[styles.compareValue, styles.comparePremium]}>{premium}</Text></View>; }
 function PaymentLine({ label, value }: { label: string; value: string }) { return <View style={styles.paymentLine}><Text style={styles.helper}>{label}</Text><Text selectable style={styles.paymentValue}>{value}</Text></View>; }
