@@ -5,6 +5,7 @@ import { sanitizeRemoteImageUrl } from "@/lib/media";
 
 type AfterActionReviewRow = {
   id: string;
+  is_visible: boolean;
   market: Market;
   title: string;
   short_text: string | null;
@@ -26,6 +27,7 @@ function mapAfterActionReview(row: AfterActionReviewRow): AfterActionReview {
 
   return {
     id: row.id,
+    isVisible: row.is_visible,
     market: row.market,
     title: row.title,
     shortText: row.short_text ?? row.summary ?? "",
@@ -43,7 +45,7 @@ function mapAfterActionReview(row: AfterActionReviewRow): AfterActionReview {
 export async function fetchAfterActionReviews() {
   const result = await supabase
     .from("after_action_reviews")
-    .select("id, market, title, short_text, body_text, summary, chart_image, chart_url, video_url, published_at, created_at, is_free, tradingview_url, thumbnail_url, external_source_id")
+    .select("id, is_visible, market, title, short_text, body_text, summary, chart_image, chart_url, video_url, published_at, created_at, is_free, tradingview_url, thumbnail_url, external_source_id")
     .order("created_at", { ascending: false });
 
   return {
@@ -75,7 +77,7 @@ export async function publishAfterActionReview(input: {
       tradingview_url: input.tradingview_url || null,
       thumbnail_url: input.thumbnail_url || null,
     })
-    .select("id, market, title, short_text, body_text, summary, chart_image, chart_url, video_url, published_at, created_at, is_free, tradingview_url, thumbnail_url, external_source_id")
+    .select("id, is_visible, market, title, short_text, body_text, summary, chart_image, chart_url, video_url, published_at, created_at, is_free, tradingview_url, thumbnail_url, external_source_id")
     .single();
 
   return {
@@ -110,7 +112,7 @@ export async function updateAfterActionReview(
       published_at: publishedAt,
     })
     .eq("id", reviewId)
-    .select("id, market, title, short_text, body_text, summary, chart_image, chart_url, video_url, published_at, created_at, is_free, tradingview_url, thumbnail_url, external_source_id")
+    .select("id, is_visible, market, title, short_text, body_text, summary, chart_image, chart_url, video_url, published_at, created_at, is_free, tradingview_url, thumbnail_url, external_source_id")
     .single();
 
   return {

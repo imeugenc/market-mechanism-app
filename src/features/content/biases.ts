@@ -5,6 +5,7 @@ import { DailyBias, Market } from "@/types/domain";
 
 type DailyBiasRow = {
   id: string;
+  is_visible: boolean;
   market: Market;
   forecasted_bias: DailyBias["forecastedBias"];
   confidence: DailyBias["confidence"];
@@ -22,11 +23,12 @@ type DailyBiasRow = {
   external_source_id: string | null;
 };
 
-const SELECT_COLUMNS = "id, market, forecasted_bias, confidence, outcome, notes, chart_image, video_url, related_review_id, published_at, created_at, trading_date, liquidity_target, tradingview_url, thumbnail_url, external_source_id";
+const SELECT_COLUMNS = "id, is_visible, market, forecasted_bias, confidence, outcome, notes, chart_image, video_url, related_review_id, published_at, created_at, trading_date, liquidity_target, tradingview_url, thumbnail_url, external_source_id";
 
 function mapDailyBias(row: DailyBiasRow): DailyBias {
   return {
     id: row.id,
+    isVisible: row.is_visible,
     market: row.market,
     forecastedBias: row.forecasted_bias,
     confidence: row.confidence,

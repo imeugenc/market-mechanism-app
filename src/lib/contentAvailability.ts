@@ -4,6 +4,10 @@ export function sortNewest<T extends { publishedAt: string }>(items: T[]) {
   return [...items].sort((a, b) => getSafeTimestamp(b.publishedAt) - getSafeTimestamp(a.publishedAt));
 }
 
+export function isPublicContent(item: { isVisible?: boolean }) {
+  return item.isVisible !== false;
+}
+
 export function isPublishedToday(value?: string) {
   if (!value) return false;
   const date = new Date(value);

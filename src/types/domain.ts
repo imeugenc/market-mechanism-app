@@ -31,6 +31,7 @@ export interface DailyAnalysis {
 
 export interface DailyBias {
   id: string;
+  isVisible?: boolean;
   market: Market;
   forecastedBias: "Bullish" | "Bearish" | "Neutral" | "Range";
   confidence: "Low" | "Medium" | "High";
@@ -49,6 +50,7 @@ export interface DailyBias {
 
 export interface AfterActionReview {
   id: string;
+  isVisible?: boolean;
   market: Market;
   title: string;
   shortText: string;
@@ -64,6 +66,7 @@ export interface AfterActionReview {
 
 export interface AltcoinPost {
   id: string;
+  isVisible?: boolean;
   coinSymbol: string;
   title: string;
   summary: string;

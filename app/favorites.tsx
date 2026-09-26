@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { ContentStatePanel } from "@/components/ContentStatePanel";
 import { Screen } from "@/components/Screen";
 import { SectionHeader } from "@/components/SectionHeader";
+import { isPublicContent } from "@/lib/contentAvailability";
 import { useAppState } from "@/providers/AppProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 
@@ -14,8 +15,8 @@ export default function FavoritesScreen() {
 
   const resolveHref = (type: (typeof favorites)[number]["contentType"], id: string): Href | null => {
     if (type === "analysis" && analyses.some((item) => item.id === id)) return `/analysis/${id}` as Href;
-    if (type === "review" && reviews.some((item) => item.id === id)) return `/review/${id}` as Href;
-    if (type === "altcoin" && altcoinPosts.some((item) => item.id === id)) return `/altcoin/${id}` as Href;
+    if (type === "review" && reviews.some((item) => item.id === id && isPublicContent(item))) return `/review/${id}` as Href;
+    if (type === "altcoin" && altcoinPosts.some((item) => item.id === id && isPublicContent(item))) return `/altcoin/${id}` as Href;
     return null;
   };
 

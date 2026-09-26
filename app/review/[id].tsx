@@ -9,6 +9,7 @@ import { Screen } from "@/components/Screen";
 import { createContentComment, deleteContentComment, fetchContentComments } from "@/features/comments/service";
 import { useAppState } from "@/providers/AppProvider";
 import { formatDate } from "@/lib/format";
+import { isPublicContent } from "@/lib/contentAvailability";
 import { displayBiasConfidence } from "@/lib/display";
 import { useClientReady } from "@/hooks/useResponsiveWeb";
 import { contentPreviewImage } from "@/lib/media";
@@ -20,8 +21,8 @@ export default function ReviewDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { dailyBiases, publicContentStates, session, user, reviews } = useAppState();
   const clientReady = useClientReady();
-  const review = reviews.find((item) => item.id === id);
-  const relatedBias = dailyBiases.find((item) => item.relatedReviewId === id);
+  const review = reviews.find((item) => item.id === id && isPublicContent(item));
+  const relatedBias = dailyBiases.find((item) => item.relatedReviewId === id && isPublicContent(item));
   const chartImage = contentPreviewImage(review ?? {});
   const [comments, setComments] = useState<ContentComment[]>([]);
   const [commentBody, setCommentBody] = useState("");

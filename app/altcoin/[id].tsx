@@ -5,6 +5,7 @@ import { ContentStatePanel } from "@/components/ContentStatePanel";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Screen } from "@/components/Screen";
 import { formatDailyLabel } from "@/lib/format";
+import { isPublicContent } from "@/lib/contentAvailability";
 import { useClientReady } from "@/hooks/useResponsiveWeb";
 import { contentPreviewImage } from "@/lib/media";
 import { useAppState } from "@/providers/AppProvider";
@@ -14,7 +15,7 @@ export default function AltcoinDetailScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { altcoinPosts, favorites, membership, publicContentStates, toggleFavorite } = useAppState();
   const clientReady = useClientReady();
-  const item = altcoinPosts.find((post) => post.id === id);
+  const item = altcoinPosts.find((post) => post.id === id && isPublicContent(post));
 
   if (!clientReady || publicContentStates.altcoins === "loading") return <Screen><ContentStatePanel kind="loading" /></Screen>;
   if (publicContentStates.altcoins === "error") return <Screen><ContentStatePanel kind="error" /></Screen>;

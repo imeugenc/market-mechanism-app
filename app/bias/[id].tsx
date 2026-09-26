@@ -6,7 +6,7 @@ import { PrimaryButton } from "@/components/PrimaryButton";
 import { ContentStatePanel } from "@/components/ContentStatePanel";
 import { Screen } from "@/components/Screen";
 import { fetchDailyBiasById } from "@/features/content/biases";
-import { isPublishedToday } from "@/lib/contentAvailability";
+import { isPublicContent, isPublishedToday } from "@/lib/contentAvailability";
 import { useClientReady } from "@/hooks/useResponsiveWeb";
 import { formatDate } from "@/lib/format";
 import { displayBiasConfidence, displayBiasOutcome } from "@/lib/display";
@@ -43,7 +43,7 @@ export default function BiasDetailScreen() {
 
   const bias = detail.id === id ? detail.bias : null;
   const chartImage = contentPreviewImage(bias ?? {});
-  const relatedReview = reviews.find((item) => item.id === bias?.relatedReviewId);
+  const relatedReview = reviews.find((item) => item.id === bias?.relatedReviewId && isPublicContent(item));
 
   if (!clientReady || !id || detail.id !== id || detail.status === "loading") {
     return <Screen><Stack.Screen options={{ title: "Daily Bias" }} /><ContentStatePanel kind="loading" title="Se încarcă Daily Bias…" /></Screen>;

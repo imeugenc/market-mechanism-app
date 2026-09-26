@@ -5,6 +5,7 @@ import { AltcoinPost } from "@/types/domain";
 
 type AltcoinPostRow = {
   id: string;
+  is_visible: boolean;
   coin_symbol: string;
   title: string;
   summary: string | null;
@@ -24,6 +25,7 @@ function mapAltcoinPost(row: AltcoinPostRow): AltcoinPost {
 
   return {
     id: row.id,
+    isVisible: row.is_visible,
     coinSymbol: row.coin_symbol,
     title: row.title,
     summary: row.summary ?? "",
@@ -41,7 +43,7 @@ function mapAltcoinPost(row: AltcoinPostRow): AltcoinPost {
 export async function fetchAltcoinPosts() {
   const result = await supabase
     .from("altcoin_posts")
-    .select("id, coin_symbol, title, summary, body_text, chart_image, video_url, is_premium, published_at, created_at, tradingview_url, thumbnail_url, external_source_id")
+    .select("id, is_visible, coin_symbol, title, summary, body_text, chart_image, video_url, is_premium, published_at, created_at, tradingview_url, thumbnail_url, external_source_id")
     .order("published_at", { ascending: false });
 
   return {
@@ -71,7 +73,7 @@ export async function publishAltcoinPost(input: {
       tradingview_url: input.tradingview_url || null,
       thumbnail_url: input.thumbnail_url || null,
     })
-    .select("id, coin_symbol, title, summary, body_text, chart_image, video_url, is_premium, published_at, created_at, tradingview_url, thumbnail_url, external_source_id")
+    .select("id, is_visible, coin_symbol, title, summary, body_text, chart_image, video_url, is_premium, published_at, created_at, tradingview_url, thumbnail_url, external_source_id")
     .single();
 
   return {
@@ -105,7 +107,7 @@ export async function updateAltcoinPost(
       published_at: normalizeIsoDate(input.published_at),
     })
     .eq("id", postId)
-    .select("id, coin_symbol, title, summary, body_text, chart_image, video_url, is_premium, published_at, created_at, tradingview_url, thumbnail_url, external_source_id")
+    .select("id, is_visible, coin_symbol, title, summary, body_text, chart_image, video_url, is_premium, published_at, created_at, tradingview_url, thumbnail_url, external_source_id")
     .single();
 
   return {

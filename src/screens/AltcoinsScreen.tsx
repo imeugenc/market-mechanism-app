@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { ContentStatePanel } from "@/components/ContentStatePanel";
 import { Screen } from "@/components/Screen";
 import { SectionHeader } from "@/components/SectionHeader";
-import { sortNewest } from "@/lib/contentAvailability";
+import { isPublicContent, sortNewest } from "@/lib/contentAvailability";
 import { formatDailyLabel } from "@/lib/format";
 import { useAppState } from "@/providers/AppProvider";
 import { colors, radii, spacing, typography } from "@/theme";
@@ -13,7 +13,7 @@ import { colors, radii, spacing, typography } from "@/theme";
 export function AltcoinsScreen() {
   const { altcoinPosts, membership, publicContentStates } = useAppState();
   const contentState = publicContentStates.altcoins;
-  const posts = sortNewest(altcoinPosts);
+  const posts = sortNewest(altcoinPosts.filter(isPublicContent));
 
   return (
     <Screen>

@@ -12,7 +12,7 @@ import { Screen } from "@/components/Screen";
 import { SectionHeader } from "@/components/SectionHeader";
 import { CORE_MARKETS } from "@/constants/markets";
 import { isPremiumLocked, latestAnalysisByMarket } from "@/features/content/access";
-import { isPublishedToday, sortNewest } from "@/lib/contentAvailability";
+import { isPublicContent, isPublishedToday, sortNewest } from "@/lib/contentAvailability";
 import { displayBiasConfidence, displayBiasOutcome, displayPlan, displayRank } from "@/lib/display";
 import { formatDailyLabel } from "@/lib/format";
 import { useAppState } from "@/providers/AppProvider";
@@ -23,8 +23,8 @@ export default function HomeScreen() {
     analyses, dailyBiases, favorites, hasCompletedOnboarding, membership, onboardingReady,
     publicContentState, publicContentStates, reviews, toggleFavorite, user,
   } = useAppState();
-  const latestBiases = sortNewest(dailyBiases).slice(0, 4);
-  const latestReview = sortNewest(reviews)[0];
+  const latestBiases = sortNewest(dailyBiases.filter(isPublicContent)).slice(0, 4);
+  const latestReview = sortNewest(reviews.filter(isPublicContent))[0];
   const latestBriefing = latestAnalysisByMarket(analyses)[0];
   const marketStates = [publicContentStates.biases, publicContentStates.reviews, publicContentStates.analyses];
   const marketContentStatus = marketStates.some((state) => state === "loading") ? "loading" : marketStates.every((state) => state === "error") ? "error" : "ready";
@@ -79,7 +79,7 @@ export default function HomeScreen() {
           <SectionHeader eyebrow="Piețe" title="Acces rapid" caption="Un singur punct de intrare pentru contextul curent și istoric." />
           <View style={styles.marketGrid}>
             {CORE_MARKETS.map((market) => {
-              const newest = sortNewest([...analyses.filter((item) => item.market === market), ...dailyBiases.filter((item) => item.market === market), ...reviews.filter((item) => item.market === market)])[0];
+              const newest = sortNewest([...analyses.filter((item) => item.market === market), ...dailyBiases.filter((item) => item.market === market && isPublicContent(item)), ...reviews.filter((item) => item.market === market && isPublicContent(item))])[0];
               return <MarketCard key={market} market={market} latestPublishedAt={newest?.publishedAt} contentStatus={marketContentStatus} />;
             })}
           </View>

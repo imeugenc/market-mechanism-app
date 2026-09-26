@@ -11,7 +11,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { SegmentedControl } from "@/components/SegmentedControl";
 import { CORE_MARKETS } from "@/constants/markets";
 import { canAccessPremiumContent } from "@/features/content/access";
-import { isPublishedToday, sortNewest } from "@/lib/contentAvailability";
+import { isPublicContent, isPublishedToday, sortNewest } from "@/lib/contentAvailability";
 import { displayBiasConfidence, displayBiasOutcome, displayPlan } from "@/lib/display";
 import { formatDailyLabel } from "@/lib/format";
 import { useClientReady } from "@/hooks/useResponsiveWeb";
@@ -38,8 +38,8 @@ export function MarketDetailScreen() {
   }
 
   const marketAnalyses = sortNewest(analyses.filter((item) => item.market === normalizedMarket));
-  const marketReviews = sortNewest(reviews.filter((item) => item.market === normalizedMarket));
-  const marketBiases = sortNewest(dailyBiases.filter((item) => item.market === normalizedMarket));
+  const marketReviews = sortNewest(reviews.filter((item) => item.market === normalizedMarket && isPublicContent(item)));
+  const marketBiases = sortNewest(dailyBiases.filter((item) => item.market === normalizedMarket && isPublicContent(item)));
   const todayAnalysis = marketAnalyses.find((item) => isPublishedToday(item.publishedAt));
   const todayBias = marketBiases.find((item) => isPublishedToday(item.publishedAt));
   const latestAnalysis = marketAnalyses[0];

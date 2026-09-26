@@ -7,7 +7,7 @@ import { MarketCard } from "@/components/MarketCard";
 import { Screen } from "@/components/Screen";
 import { SectionHeader } from "@/components/SectionHeader";
 import { CORE_MARKETS } from "@/constants/markets";
-import { sortNewest } from "@/lib/contentAvailability";
+import { isPublicContent, sortNewest } from "@/lib/contentAvailability";
 import { useAppState } from "@/providers/AppProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 
@@ -22,7 +22,7 @@ export default function MarketsScreen() {
       {publicContentState === "partial" ? <ContentStatePanel kind="error" title="Unele piețe nu s-au încărcat" message="Poți folosi în continuare conținutul disponibil." compact /> : null}
         <View style={styles.grid}>
           {CORE_MARKETS.map((market) => {
-            const newest = sortNewest([...analyses.filter((item) => item.market === market), ...dailyBiases.filter((item) => item.market === market), ...reviews.filter((item) => item.market === market)])[0];
+            const newest = sortNewest([...analyses.filter((item) => item.market === market), ...dailyBiases.filter((item) => item.market === market && isPublicContent(item)), ...reviews.filter((item) => item.market === market && isPublicContent(item))])[0];
             return <MarketCard key={market} market={market} latestPublishedAt={newest?.publishedAt} contentStatus={marketContentStatus} />;
           })}
         </View>
